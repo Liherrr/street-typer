@@ -1,0 +1,10 @@
+# One-click deploy config for Render (https://render.com).
+# In Render: New + -> Blueprint -> connect the repo containing this folder.
+services:
+  - type: web
+    name: bit-rate-brawl
+    runtime: python
+    plan: free
+    buildCommand: "echo no dependencies"
+    startCommand: "python fight_server.py --cloud"
+    autoDeploy: true

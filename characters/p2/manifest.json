@@ -1,0 +1,33 @@
+{
+  "name": "Rival",
+  "fps": 10,
+  "ext": "svg",
+  "states": {
+    "idle": {
+      "count": 6,
+      "loop": true
+    },
+    "attack1": {
+      "count": 5
+    },
+    "attack2": {
+      "count": 5
+    },
+    "attack3": {
+      "count": 5
+    },
+    "attack4": {
+      "count": 5
+    },
+    "hurt": {
+      "count": 3
+    },
+    "win": {
+      "count": 4,
+      "loop": true
+    },
+    "lose": {
+      "count": 4
+    }
+  }
+}
