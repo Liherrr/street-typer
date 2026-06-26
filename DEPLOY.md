@@ -29,6 +29,12 @@ gh repo create street-typer --public --source=. --remote=origin --push
 
 ## Option 1 — Render (recommended, free)
 
+One-click (after pushing — replace `YOUR-USERNAME` with your GitHub handle):
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/YOUR-USERNAME/street-typer)
+
+…or do it by hand:
+
 1. Push this `fight/` folder to a **GitHub** repo (it can be the repo root or a subfolder).
 2. Go to <https://render.com> and sign in (GitHub login is easiest).
 3. **New +  ->  Web Service  ->** connect your repo.
