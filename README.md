@@ -10,11 +10,11 @@
 
 You type a stream of random letters. Every clean four-letter block lands an attack, and its damage equals the bits you just transmitted. Your opponent's health bar is sized so that only a sustained 20 bits per second can drain it inside a 60-second round, so the player with the higher information rate wins.
 
-Underneath the fighting game is a bit-rate meter. The rest of this document is about that meter: the quantity it measures, why typing random letters maximizes that quantity for the people who will play it, the other input methods we built and dropped, and the design choices that keep the measurement honest.
+Underneath the fighting game is a bit-rate meter. The rest of this document is about that meter: the quantity it measures, why typing random letters maximizes that quantity for the people who will play it, the other input methods we built and dropped, and the design choices behind the measurement.
 
 ## The objective
 
-Every input method gets one score: the information transfer rate it actually achieves.
+Every input method gets one score: the information transfer rate it achieves.
 
 ```
 B = log2(N − 1) · max(Sc − Si, 0) / t          [bits / second]
@@ -49,7 +49,7 @@ That 39 bits per second is entropy *given context*. Most of it is predictable fr
 
 End to end we measured about 5 bits per second, with an analyzed ceiling near 8. We also pushed on the alphabet axis directly and checked the estimates adversarially:
 
-| source (i.i.d.)            | honest N | bits/sel | sel/s | accuracy | **B (b/s)** |
+| source (i.i.d.)            | effective N | bits/sel | sel/s | accuracy | **B (b/s)** |
 |----------------------------|:--------:|:--------:|:-----:|:--------:|:-----------:|
 | spoken digits 0-9          |    10    |   3.17   |  2.2  |   0.82   |    ~4.5     |
 | spoken letter-names        |   ~15\*  |   3.81   |  2.2  |   0.70   |    ~3.3     |
@@ -59,7 +59,7 @@ End to end we measured about 5 bits per second, with an analyzed ceiling near 8.
 
 \*Raw letter-names number 26, but the "E-set" (B, C, D, E, G, P, T, V, Z) collapses into one acoustic class, so the *distinguishable* alphabet is about 15 and exact-match accuracy caps near 0.70.
 
-Every spoken option lands around 4 to 6 bits per second because the three factors fight each other: a larger, more distinct vocabulary raises `log2(N − 1)` but lowers the rate (longer words) and the accuracy (more confusable tokens, more hesitation). The product stays flat, and it sits well below typing.
+Every spoken option lands around 4 to 6 bits per second because the three factors trade off against each other: a larger, more distinct vocabulary raises `log2(N − 1)` but lowers the rate (longer words) and the accuracy (more confusable tokens, more hesitation). The product stays flat, and it sits well below typing.
 
 ## Why typing wins
 
@@ -73,21 +73,21 @@ Rate comes from the same automaticity. On random letters, which deny typists the
 
 Multiply it out: `4.64 bits/sel × 3-6 /s × ≈0.95 ≈ 13-26 bits/second`, comfortably past the 8 bits per second speech ceiling. A casual but accurate typist already measures 10 to 15; a fast one runs well above 25. Reading keeps up easily, since the eyes pull in the next letters through the fastest input channel a person has.
 
-## Design choices that keep the measurement honest
+## Design choices behind the measurement
 
-- A real, maximal `N`. All 26 letters, each fully distinguishable, so `log2(N − 1)` counts bits the channel actually carries. We do not count acoustically identical tokens as separate symbols, which would claim bits that never crossed the channel.
-- A lossless channel. Typing removes the recognizer, fixes accuracy near 1.0, and recovers the full per-selection entropy. This is the largest single win over speech.
-- An i.i.d. uniform source. Maximum entropy for a fixed `N`, and an honest measurement: no language model and no patterns inflating the score.
+- A maximal `N`. All 26 letters, each fully distinguishable, so `log2(N − 1)` reflects bits the channel carries rather than an inflated count. We do not count acoustically identical tokens as separate symbols, which would claim bits that never crossed the channel.
+- A lossless channel. Typing removes the recognizer, fixes accuracy near 1.0, and recovers the full per-selection entropy that a speech recognizer erodes.
+- An i.i.d. uniform source. Maximum entropy for a fixed `N`, with no language model or patterns inflating the score.
 - Four-letter chunks. Letters are read and struck in groups of four, which matches how typists buffer and the limits of motor chunking (Miller 1956). Chunking spreads the fixed per-action overhead and sets the attack cadence.
 - Competition, which raises both rate and accuracy for a fixed player. The next section explains why.
 
 ## Why wrap it in a fight
 
-The fighting game is not a coat of paint. It controls the two factors a player can squander, rate and accuracy, and it turns the metric into the mechanic.
+The fighting game controls the two factors a player can squander, rate and accuracy, and it turns the metric into the mechanic.
 
 Damage is bits. A clean four-letter block deals `log2 25 × (correct − wrong)` damage, and HP is `1200 = 20 b/s × 60 s`, so only a round near 20 bits per second can empty a bar. The objective and the win condition are the same function, so there is no way to win except by maximizing `B`.
 
-Competition raises `B` for the same pair of hands. Performance climbs with arousal up to a point (Yerkes-Dodson 1908), and a live opponent with a draining health bar supplies a measured stake that pushes attention toward its peak and holds it there. A clear goal, instant feedback, and a challenge matched to skill are also the conditions for flow (Csikszentmihalyi 1990). Sustained attention is what lifts `R` and suppresses the slips that cost the `(2a − 1)` term. The same hands produce a higher `B` under pressure than in a solo trial, so the entertainment is, quite directly, optimization of the objective.
+Competition raises `B` for the same pair of hands. Performance climbs with arousal up to a point (Yerkes-Dodson 1908), and a live opponent with a draining health bar supplies a measured stake that pushes attention toward its peak and holds it there. A clear goal, instant feedback, and a challenge matched to skill are also the conditions for flow (Csikszentmihalyi 1990). Sustained attention is what lifts `R` and suppresses the slips that cost the `(2a − 1)` term. The same hands produce a higher `B` under pressure than in a solo trial, so the competition directly serves the objective.
 
 ## How it works
 
