@@ -1,5 +1,13 @@
 # Street Typer
 
+> **A two-player typing fight whose damage is the information you transmit — and the case, in math and measurement, for why overlearned i.i.d. keyboard typing beats speech and every other modality at raw bit rate.**
+
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+&nbsp;![Python](https://img.shields.io/badge/Python-3.7%2B-3776AB.svg?logo=python&logoColor=white)
+&nbsp;![Dependencies: none](https://img.shields.io/badge/dependencies-none%20(stdlib)-brightgreen.svg)
+&nbsp;![Players: 2](https://img.shields.io/badge/players-2-orange.svg)
+&nbsp;![Objective: max bits/sec](https://img.shields.io/badge/objective-max%20bits%E2%81%84sec-8a2be2.svg)
+
 A two-player typing duel in which the win condition is, literally, your information transfer rate.
 You type a stream of random letters; every clean four-letter block lands an attack whose damage equals
 the bits you just transmitted. The opponent's health bar is sized so that only a sustained **~20
