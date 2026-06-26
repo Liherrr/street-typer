@@ -149,20 +149,13 @@
   <section id="lobby" class="screen on">
     <h1 class="gametitle">STREET TYPER</h1>
     <p class="lede">A live typing duel. Type the highlighted letters; every clean <b>4-letter block</b> throws an
-      attack. Damage = bits. HP is <b>1200</b> — only a ~<b>20 bits/sec</b> run can K.O. your opponent in 60 s.</p>
+      attack. Damage = bits.</p>
     <div class="lobcard">
       <div class="seats">
         <div class="seat" id="seat1"><div class="who">Player 1 (host)</div><div class="st" id="st1">—</div></div>
         <div class="seat" id="seat2"><div class="who">Player 2</div><div class="st" id="st2">—</div></div>
       </div>
       <div class="status mono" id="lobStatus">connecting…</div>
-      <div class="join" id="joinBox" style="display:none">
-        Player 2 on the same network: just run the launcher — it auto-joins.<br>
-        Or open one of these on the other computer (try in order until one loads):
-        <div class="u" id="joinUrl">—</div>
-        <span style="color:#6b7686">Can't reach it? It's usually the Windows firewall — run
-        <b style="color:#aeb9c9">Allow Firewall (run as admin).cmd</b> once, or host from the Mac.</span>
-      </div>
       <div class="row" style="margin-top:16px">
         <button class="btn" id="readyBtn" disabled>Ready to fight</button>
         <span class="status mono" id="readyHint"></span>
@@ -416,9 +409,6 @@
         if(you===null){ $("lobStatus").textContent="The arena is full (2 players already fighting)."; return; }
         $("younm").textContent = you===1?"PLAYER 1 (you)":"PLAYER 2 (you)";
         $("oppnm").textContent = you===1?"PLAYER 2":"PLAYER 1";
-        if(you===1){ $("joinBox").style.display="block";
-          var urls=ev.lanUrls||(ev.lanUrl?[ev.lanUrl]:[]);
-          $("joinUrl").innerHTML = urls.length? urls.map(function(u){return '<div>'+u+'</div>';}).join("") : "—"; }
         // each player embodies their OWN character (P1=char1, P2=char2); right side is the opponent.
         $("f1").textContent = (you===1)?"🥷":"🤖";   // left = you
         $("f2").textContent = (you===1)?"🤖":"🥷";   // right = opponent (emoji fallback only)
