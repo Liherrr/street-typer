@@ -9,6 +9,24 @@ the second becomes Player 2. Everything is outbound to the cloud, so no firewall
 
 ---
 
+## Step 0 — get this folder onto GitHub
+
+This folder is already a git repo (`main` branch, one commit). Create an empty repo on GitHub
+(no README/license — this folder has them), then from **inside this folder**:
+
+```bash
+git remote add origin https://github.com/<your-username>/bit-rate-brawl.git
+git push -u origin main
+```
+
+Or, with the GitHub CLI, one command does both create + push:
+
+```bash
+gh repo create bit-rate-brawl --public --source=. --remote=origin --push
+```
+
+---
+
 ## Option 1 — Render (recommended, free)
 
 1. Push this `fight/` folder to a **GitHub** repo (it can be the repo root or a subfolder).
