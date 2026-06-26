@@ -1,5 +1,5 @@
 @echo off
-title Bit-Rate Brawl
+title Street Typer
 cd /d "%~dp0"
 set "PY=python"
 where python >nul 2>nul || set "PY=py"
@@ -12,14 +12,14 @@ where %PY% >nul 2>nul || (
 
 rem --- one-time: open the Windows firewall so the OTHER computer can reach this host ---
 if not exist "%~dp0.firewall_ok" (
-  echo One-time setup: allowing Bit-Rate Brawl through the Windows firewall.
+  echo One-time setup: allowing Street Typer through the Windows firewall.
   echo A Windows prompt will appear -- click YES  ^(needed so the other laptop can connect^).
   powershell -NoProfile -Command "try{ Start-Process -Verb RunAs -Wait -WindowStyle Hidden -FilePath '%~dp0_firewall_rules.cmd' }catch{}"
   echo.
 )
 
 echo ============================================================
-echo  BIT-RATE BRAWL  -  starting...
+echo  STREET TYPER  -  starting...
 echo  Your browser opens automatically. KEEP THIS WINDOW OPEN
 echo  while you play. (Close it or press Ctrl+C to stop.)
 echo ============================================================

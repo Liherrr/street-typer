@@ -25,7 +25,7 @@ def _end(px, py, deg, length):
 
 
 def frame_svg(color, accent, label, idx, n, *, lean=0.0, yoff=0.0,
-              armL=18.0, armR=18.0, legL=12.0, legR=12.0, lying=0.0):
+              armL=18.0, armR=18.0, legL=12.0, legR=12.0, lying=0.0, head_style="round"):
     cx = W / 2
     hip_y, neck_y, head_y, sh_y = 232 - yoff, 150 - yoff, 116 - yoff, 158 - yoff
     sx_l, sx_r, hx_l, hx_r = cx - 14, cx + 14, cx - 10, cx + 10
@@ -36,13 +36,23 @@ def frame_svg(color, accent, label, idx, n, *, lean=0.0, yoff=0.0,
         return ('<line x1="%.0f" y1="%.0f" x2="%.0f" y2="%.0f" stroke="%s" '
                 'stroke-width="%d" stroke-linecap="round"/>' % (x1, y1, x2, y2, c, w))
 
+    if head_style == "square":   # blocky "robot/bruiser" head + antenna
+        head = ('<rect x="%.0f" y="%.0f" width="44" height="44" rx="7" fill="%s"/>'
+                '<line x1="%.0f" y1="%.0f" x2="%.0f" y2="%.0f" stroke="%s" stroke-width="4"/>'
+                '<circle cx="%.0f" cy="%.0f" r="5" fill="%s"/>'
+                % (cx - 22, head_y - 22, color, cx, head_y - 22, cx, head_y - 36, accent,
+                   cx, head_y - 40, accent))
+    else:                        # round "ninja" head + headband
+        head = ('<circle cx="%.0f" cy="%.0f" r="26" fill="%s"/>'
+                '<rect x="%.0f" y="%.0f" width="56" height="9" rx="3" fill="%s"/>'
+                % (cx, head_y, color, cx - 28, head_y - 10, accent))
     parts = [
         limb(hx_l, hip_y, fL[0], fL[1], 13, color),
         limb(hx_r, hip_y, fR[0], fR[1], 13, color),
         limb(cx, neck_y, cx, hip_y, 16, color),
         limb(sx_l, sh_y, hL[0], hL[1], 11, color),
         limb(sx_r, sh_y, hR[0], hR[1], 11, accent),       # accent = the "weapon" arm
-        '<circle cx="%.0f" cy="%.0f" r="26" fill="%s"/>' % (cx, head_y, color),
+        head,
     ]
     if lying > 0:
         rot = ' transform="rotate(%.0f %.0f %.0f)"' % (lying * 88, cx, GROUND)
@@ -77,7 +87,7 @@ def states():
 LOOPS = {'idle', 'win'}
 
 
-def build_character(folder, name, color, accent):
+def build_character(folder, name, color, accent, head_style="round"):
     out = os.path.join(ROOT, 'characters', folder)
     os.makedirs(out, exist_ok=True)
     st = states()
@@ -85,7 +95,8 @@ def build_character(folder, name, color, accent):
     for state, poses in st.items():
         n = len(poses)
         for i, pose in enumerate(poses):
-            svg = frame_svg(color, accent, '%s %s' % (name.upper(), state), i, n, **pose)
+            svg = frame_svg(color, accent, '%s %s' % (name.upper(), state), i, n,
+                            head_style=head_style, **pose)
             with open(os.path.join(out, '%s_%02d.svg' % (state, i + 1)), 'w', encoding='utf-8') as f:
                 f.write(svg)
         entry = {'count': n}
@@ -98,8 +109,9 @@ def build_character(folder, name, color, accent):
 
 
 def main():
-    a = build_character('p1', 'Ninja', '#56e3c9', '#ffd9a3')
-    b = build_character('p2', 'Rival', '#ff6b6b', '#ffd23f')
+    # two visibly DIFFERENT fighters (round head + headband vs square head + antenna), SF-warm colors
+    a = build_character('p1', 'P1', '#ffd9a3', '#ff8a1e', head_style='round')
+    b = build_character('p2', 'P2', '#ff7a3d', '#ffd23f', head_style='square')
     print('placeholders written:')
     print('  %s  (%d frames)' % a)
     print('  %s  (%d frames)' % b)

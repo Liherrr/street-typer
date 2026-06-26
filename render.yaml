@@ -2,7 +2,7 @@
 # In Render: New + -> Blueprint -> connect the repo containing this folder.
 services:
   - type: web
-    name: bit-rate-brawl
+    name: street-typer
     runtime: python
     plan: free
     buildCommand: "echo no dependencies"

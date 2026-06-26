@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bit-Rate Brawl - two-PC live typing fight (macOS/Linux launcher).
+# Street Typer - two-PC live typing fight (macOS/Linux launcher).
 # Pure Python standard library: NO pip installs, no model, no mic.
 #
 #   Both players just run this on the same network:
@@ -13,5 +13,5 @@ if [ -z "$PY" ]; then
   echo "ERROR: Python 3.7+ not found. Install from https://www.python.org/downloads/ and re-run."; exit 1
 fi
 echo ">> using $("$PY" --version 2>&1)"
-echo ">> starting Bit-Rate Brawl (no dependencies)."
+echo ">> starting Street Typer (no dependencies)."
 exec "$PY" fight_server.py "$@"

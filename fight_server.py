@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Bit-Rate Brawl - a two-PC LIVE typing fight.  Pure Python standard library: no pip installs,
+Street Typer - a two-PC LIVE typing fight.  Pure Python standard library: no pip installs,
 no model, no microphone.  Typing is exact in the browser, so this process is only a tiny relay +
 referee between the two players' browsers.
 
@@ -303,7 +303,7 @@ class Match:
 
 # ---------------------------------------------------------------- HTTP handler
 class Handler(BaseHTTPRequestHandler):
-    server_version = "BitRateBrawl/1.0"
+    server_version = "StreetTyper/1.0"
 
     def log_message(self, *a):
         pass
@@ -428,7 +428,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Bit-Rate Brawl - live typing fight (stdlib only).")
+    ap = argparse.ArgumentParser(description="Street Typer - live typing fight (stdlib only).")
     ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", DEFAULT_PORT)))
     ap.add_argument("--host-only", action="store_true", help="force hosting (skip auto-join discovery)")
     ap.add_argument("--no-browser", action="store_true")
@@ -456,13 +456,13 @@ def main():
     httpd.match = Match()
     if cloud:
         print("=" * 64)
-        print(" BIT-RATE BRAWL  -  hosted mode, listening on port %d" % args.port)
+        print(" STREET TYPER  -  hosted mode, listening on port %d" % args.port)
         print(" Both players open the public URL. First to load = Player 1, second = Player 2.")
         print("=" * 64)
     else:
         start_host_responder(args.port)
         print("=" * 64)
-        print(" BIT-RATE BRAWL  -  you are the HOST (Player 1). Browser opens automatically.")
+        print(" STREET TYPER  -  you are the HOST (Player 1). Browser opens automatically.")
         print(" Player 2 (other computer): run the launcher -> it auto-joins. If that fails,")
         print(" open ONE of these on the other computer (try in order until one loads):")
         for ip in all_ipv4():

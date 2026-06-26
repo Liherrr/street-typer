@@ -1,4 +1,4 @@
-# Bit-Rate Brawl
+# Street Typer
 
 A **live, two-player typing fight.** Both players type a stream of random letters; every clean
 **4-letter block** throws an attack at the opponent. Damage = the *information* you transmit, so the
@@ -26,8 +26,8 @@ Start command:  python fight_server.py --cloud
 ```
 
 ### Option B — local, on your own network
-- **Windows:** double-click **`Bit-Rate Brawl.cmd`** (it opens the firewall once, with a Yes prompt).
-- **macOS:** double-click **`Bit-Rate Brawl.command`** (first time: right-click → Open).
+- **Windows:** double-click **`Street Typer.cmd`** (it opens the firewall once, with a Yes prompt).
+- **macOS:** double-click **`Street Typer.command`** (first time: right-click → Open).
 - Or from a terminal: `python fight_server.py`
 
 The first machine to launch becomes the host; the second auto-discovers it on the LAN (or opens the
@@ -100,7 +100,7 @@ emoji fighters.
 | `fight.html` | the whole game (typing, combat, sprite engine, FX) |
 | `characters/p1`, `characters/p2` | the two fighters' frames + manifest (replace with your footage) |
 | `tools/make_placeholders.py` | regenerates the placeholder fighters |
-| `Bit-Rate Brawl.cmd` / `.command` | double-click launchers (Windows / macOS) |
+| `Street Typer.cmd` / `.command` | double-click launchers (Windows / macOS) |
 | `Allow Firewall (run as admin).cmd` | one-click Windows firewall opener (local play) |
 | `render.yaml`, `Procfile`, `requirements.txt` | cloud deploy config |
 | `DEPLOY.md` | step-by-step hosting guide |

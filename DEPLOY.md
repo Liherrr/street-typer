@@ -1,4 +1,4 @@
-# Put Bit-Rate Brawl on a public URL (no firewall / VPN / same-network needed)
+# Put Street Typer on a public URL (no firewall / VPN / same-network needed)
 
 The game needs a tiny always-on server that relays the two players' moves in real time.
 **Netlify can't run that** (it only serves static files + short serverless functions). Any
@@ -15,14 +15,14 @@ This folder is already a git repo (`main` branch, one commit). Create an empty r
 (no README/license — this folder has them), then from **inside this folder**:
 
 ```bash
-git remote add origin https://github.com/<your-username>/bit-rate-brawl.git
+git remote add origin https://github.com/<your-username>/street-typer.git
 git push -u origin main
 ```
 
 Or, with the GitHub CLI, one command does both create + push:
 
 ```bash
-gh repo create bit-rate-brawl --public --source=. --remote=origin --push
+gh repo create street-typer --public --source=. --remote=origin --push
 ```
 
 ---
@@ -39,7 +39,7 @@ gh repo create bit-rate-brawl --public --source=. --remote=origin --push
    - **Start Command:** `python fight_server.py --cloud`
    - **Instance Type:** Free
 5. **Create Web Service** and wait ~1–2 min for the first deploy.
-6. You get a URL like `https://bit-rate-brawl.onrender.com`.
+6. You get a URL like `https://street-typer.onrender.com`.
 7. **Both players open that URL** → ready up → fight.
 
 > Free-tier note: the service **sleeps after ~15 min idle**, so the *first* visit takes ~30–40 s
