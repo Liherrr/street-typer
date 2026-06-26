@@ -35,11 +35,11 @@ One-click, after pushing (replace `YOUR-USERNAME` with your GitHub handle):
 
 Or do it by hand:
 
-1. Push this `fight/` folder to a GitHub repo (it can be the repo root or a subfolder).
+1. Push this folder to a GitHub repo (it can be the repo root or a subfolder).
 2. Go to <https://render.com> and sign in (GitHub login is easiest).
 3. New + -> Web Service -> connect your repo.
 4. Settings:
-   - Root Directory: `fight` (only if fight/ is a subfolder; leave blank if it is the repo root)
+   - Root Directory: leave blank if this folder is the repo root; set it to the subfolder name only if you nested it inside a larger repo
    - Runtime: Python 3
    - Build Command: leave blank
    - Start Command: `python fight_server.py --cloud`

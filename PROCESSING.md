@@ -76,7 +76,8 @@ Tunables: `--frames N` (frames per move), `--canvas 420x540`, `--char-height 0.8
    are unmistakable. About 4 to 8 frames per move (choppy is good here; smooth is not the goal).
 6. Counts match the manifest. The `count` per state in `manifest.json` equals the actual `state_NN.png`
    files, numbered from `01` with no gaps, and `ext` is `png`.
-7. Lightweight. Each frame is about 512 px tall at most and reasonably small (a few hundred KB).
+7. Lightweight. Each frame is no taller than the canvas (540 px by default) and reasonably small;
+   the shipped frames run 60 to 90 KB each.
 
 ### Handing off for QA
 

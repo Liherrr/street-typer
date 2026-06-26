@@ -1,7 +1,7 @@
 {
   "name": "P1",
   "fps": 10,
-  "ext": "svg",
+  "ext": "png",
   "states": {
     "intro": {
       "count": 5,
