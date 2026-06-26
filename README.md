@@ -58,6 +58,7 @@ filmed, step-printed frames in and they appear automatically — no code changes
 
 ```
 characters/p1/                 # Player 1's character     (p2/ = Player 2's)
+  intro_01.png … intro_05.png  # entrance: plays once at round start, then settles to idle
   idle_01.png … idle_06.png    # loops
   attack1_01.png … attack1_05.png
   attack2_…  attack3_…  attack4_…   # your 3–4 attacks (cycled per 4-block)
@@ -73,6 +74,7 @@ characters/p1/                 # Player 1's character     (p2/ = Player 2's)
 {
   "name": "Ninja", "fps": 10, "ext": "png",
   "states": {
+    "intro":  { "count": 5, "hold": 400 },
     "idle":   { "count": 6, "loop": true },
     "attack1":{ "count": 5 }, "attack2": { "count": 5 },
     "attack3":{ "count": 5 }, "attack4": { "count": 5 },

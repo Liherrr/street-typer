@@ -11,9 +11,14 @@ me — I QA them against the acceptance criteria below before they go in the gam
 
 ## 1. Film like this (so the cut-out and timing come out clean)
 
-Each fighter needs **8 short clips**, one per move:
-`idle, attack1, attack2, attack3, attack4, hurt, win, lose`. (You can skip `hurt` — there's a flinch
-fallback — but it's worth filming.)
+Each fighter needs **9 short clips**, one per move:
+`intro, idle, attack1, attack2, attack3, attack4, hurt, win, lose`. (You can skip `hurt` — there's a
+flinch fallback — but it's worth filming.)
+
+- **`intro`** = an entrance animation or a held starting pose. It plays **once** at the start of the
+  round (during the 3-2-1), then the fighter **settles into `idle`**, then "FIGHT!" begins. Start it
+  from off-pose (walk-in / stance-up / weapon-ready) and end on your fighting stance so it blends into
+  idle cleanly. (A short held pose is fine — it lingers ~0.4 s before idle.)
 
 - **Background:** a plain, evenly-lit wall that **contrasts with your clothes/skin** (AI matte handles
   this) — or a **green/blue screen** if you have one (cleaner edges; use `--matte green`).

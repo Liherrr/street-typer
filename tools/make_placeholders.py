@@ -71,6 +71,8 @@ def frame_svg(color, accent, label, idx, n, *, lean=0.0, yoff=0.0,
 def states():
     """Per state: a list of pose dicts (one per frame)."""
     S = {}
+    # intro/entrance: arms sweep from raised down into a fighting guard, then settles
+    S['intro'] = [dict(armL=a, armR=a, yoff=y) for a, y in [(150, 7), (120, 4), (80, 1), (45, 0), (22, 0)]]
     S['idle'] = [dict(yoff=v, armL=16, armR=16) for v in (0, -3, -5, -3, 0, 2)]
     S['attack1'] = [dict(armR=a, lean=l) for a, l in [(20, 0), (70, 4), (108, 8), (95, 6), (45, 2)]]
     S['attack2'] = [dict(armR=a, armL=a * 0.7, lean=l) for a, l in [(18, 0), (60, 3), (102, 6), (82, 4), (30, 1)]]
@@ -85,6 +87,7 @@ def states():
 
 
 LOOPS = {'idle', 'win'}
+HOLDS = {'intro': 400}   # ms to linger on the final frame before settling to idle
 
 
 def build_character(folder, name, color, accent, head_style="round"):
@@ -102,6 +105,8 @@ def build_character(folder, name, color, accent, head_style="round"):
         entry = {'count': n}
         if state in LOOPS:
             entry['loop'] = True
+        if state in HOLDS:
+            entry['hold'] = HOLDS[state]
         manifest['states'][state] = entry
     with open(os.path.join(out, 'manifest.json'), 'w', encoding='utf-8') as f:
         json.dump(manifest, f, indent=2)

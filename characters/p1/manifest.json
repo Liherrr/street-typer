@@ -3,6 +3,10 @@
   "fps": 10,
   "ext": "svg",
   "states": {
+    "intro": {
+      "count": 5,
+      "hold": 400
+    },
     "idle": {
       "count": 6,
       "loop": true

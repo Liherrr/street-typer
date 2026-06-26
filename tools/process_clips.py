@@ -33,8 +33,10 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the fight/ folder
 
 # default frame count + loop per state (override with --frames to scale all of them)
-STATES = {"idle": (6, True), "attack1": (5, False), "attack2": (5, False), "attack3": (5, False),
-          "attack4": (5, False), "hurt": (3, False), "win": (4, True), "lose": (4, False)}
+STATES = {"intro": (5, False), "idle": (6, True), "attack1": (5, False), "attack2": (5, False),
+          "attack3": (5, False), "attack4": (5, False), "hurt": (3, False), "win": (4, True),
+          "lose": (4, False)}
+HOLDS = {"intro": 400}   # ms the intro/entrance pose lingers before settling to idle
 VIDEO_EXT = (".mp4", ".mov", ".m4v", ".avi", ".webm", ".mkv", ".gif")
 
 
@@ -157,6 +159,8 @@ def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex,
             entry = {"count": counts[state]}
             if loop:
                 entry["loop"] = True
+            if state in HOLDS:
+                entry["hold"] = HOLDS[state]
             man["states"][state] = entry
     with open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(man, f, indent=2)

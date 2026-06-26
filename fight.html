@@ -344,7 +344,10 @@
   };
   Sprite.prototype.play=function(state){
     var f=this.seq(state); if(!f){ if(state!=="idle") this.play("idle"); return; }
-    this.cur=f; this.state=state; this.frame=0; this.acc=0; this.img.src=f.urls[0];
+    if(this._hold){ clearTimeout(this._hold); this._hold=null; }
+    this.cur=f; this.state=state; this.frame=0; this.acc=0;
+    this.holdMs=(this.man.states[state] && this.man.states[state].hold) || 0;   // linger on final frame
+    this.img.src=f.urls[0];
   };
   Sprite.prototype.tick=function(dt){
     if(!this.cur) return;
@@ -353,7 +356,13 @@
       this.acc-=spf;
       if(this.frame<this.cur.urls.length-1){ this.img.src=this.cur.urls[++this.frame]; }
       else if(this.cur.loop){ this.frame=0; this.img.src=this.cur.urls[0]; }
-      else { if(this.state==="win"||this.state==="lose") return; this.play("idle"); return; }
+      else {                                                  // one-shot finished
+        if(this.state==="win"||this.state==="lose"){ this.cur=null; return; }   // hold the final frame
+        var self=this; this.cur=null;
+        if(this.holdMs>0){ this._hold=setTimeout(function(){ self._hold=null; self.play("idle"); }, this.holdMs); }
+        else this.play("idle");                               // intro/attack/hurt -> back to idle
+        return;
+      }
     }
   };
   Sprite.prototype.attack=function(kind){
@@ -361,6 +370,7 @@
     this.play(ns.length? ns[kind%ns.length] : "idle");
   };
   Sprite.prototype.hurt=function(){ if(this.man.states.hurt && this.state!=="win" && this.state!=="lose") this.play("hurt"); };
+  Sprite.prototype.intro=function(){ this.play(this.man.states.intro?"intro":"idle"); };  // entrance -> idle
   Sprite.prototype.idle=function(){ this.play("idle"); };
   Sprite.prototype.win =function(){ this.play(this.man.states.win ?"win" :"idle"); };
   Sprite.prototype.lose=function(){ this.play(this.man.states.lose?"lose":"idle"); };
@@ -440,7 +450,7 @@
     show("arena"); resetSeq(); render();
     $("youfill").style.width="100%"; $("oppfill").style.width="100%"; $("youhp").textContent=hpMax; $("opphp").textContent=hpMax;
     $("f1").className="fighter left"; $("f2").className="fighter right";
-    if(useSprites){ sprites.f1.idle(); sprites.f2.idle(); }
+    if(useSprites){ sprites.f1.intro(); sprites.f2.intro(); }   // entrance pose -> settles to idle, then FIGHT!
     cdOverlay.classList.add("on"); var steps=["3","2","1"]; aud();
     steps.forEach(function(s,k){setTimeout(function(){cdNum.textContent=s;},k*900);});
     setTimeout(function(){cdNum.textContent="FIGHT!";},steps.length*900);
