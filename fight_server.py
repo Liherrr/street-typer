@@ -420,6 +420,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_HEAD(self):
+        # lightweight existence check (the client uses it to detect the optional offline voice model)
+        rel = urlparse(self.path).path.lstrip("/").replace("/", os.sep)
+        full = os.path.normpath(os.path.join(HERE, rel))
+        ok = (full == HERE or full.startswith(HERE + os.sep)) and os.path.isfile(full)
+        self.send_response(200 if ok else 404)
+        self.end_headers()
+
     def do_GET(self):
         path = urlparse(self.path).path
         if path in ("/", "/index.html"):
@@ -451,9 +459,9 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_error(404)
         self.send_response(200)
         self.send_header("Content-Type", ctype)
-        if ext == ".png":
-            # cache frames so img-swaps are instant (no per-frame refetch over the network);
-            # the client appends ?v=BUILD so a redeploy busts the cache.
+        if ext in (".png", ".gz", ".tar", ".wasm"):
+            # cache frames (img-swaps stay instant) and the large offline voice model (.tar.gz),
+            # so they are not refetched every visit; the client cache-busts frames with ?v=BUILD.
             self.send_header("Cache-Control", "public, max-age=86400")
         else:
             self._nocache()

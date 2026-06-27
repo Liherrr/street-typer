@@ -129,9 +129,21 @@ The same match can be played three ways, picked in the lobby before you ready up
 
 - **Calvin** types the full 26 letters. The classic mode, unchanged.
 - **Elizabeth** types the same letters with a large on-screen keyboard under the box. It marks the next key with an arrow pointing down at it rather than lighting the key itself: a filled, glowing key pulls at peripheral vision and competes with the letters she is reading, while a small arrow shows where the key is without that pull. A guided interface for a player who values one, kept deliberately quiet.
-- **Emma** speaks the letters instead of typing them, for a player whose hand-eye coordination makes the keyboard hard. The browser's speech recognizer listens continuously and matches each spoken letter as it lands.
+- **Emma** speaks the letters instead of typing them, for a player whose hand-eye coordination makes the keyboard hard. An in-page recognizer listens to the microphone she picks and matches each spoken letter as it lands.
 
-Emma's mode also shrinks the alphabet, because spoken letters are far more confusable than printed ones. The worst offender is the E-set (B, C, D, E, G, P, T, V, Z): nine letters that all rhyme on a long "e" and that both people and recognizers routinely mix up (Loizou and Spanias 1996). The nasals (M, N), the fricatives (F, S), and pairs like I/Y and Q/U overlap the same way. So Emma's set keeps one clear representative per sound group, **A E F I K L M O R U W X**, twelve letters that stay distinct over a microphone. To keep the recognition honest it favors precision: an ambiguous sound is treated as a miss she can repeat, never a wrong letter. Her score then uses `log2(N − 1)` for her twelve letters, so her bits are measured fairly against a 26-letter opponent. Voice mode runs in Chrome or Edge, and the lobby includes a microphone check with a device picker and a live level meter, so Emma only readies up once it registers her voice.
+Emma's mode also shrinks the alphabet, because spoken letters are far more confusable than printed ones. The worst offender is the E-set (B, C, D, E, G, P, T, V, Z): nine letters that all rhyme on a long "e" and that both people and recognizers routinely mix up (Loizou and Spanias 1996). The nasals (M, N), the fricatives (F, S), and pairs like I/Y and Q/U overlap the same way. So Emma's set keeps one clear representative per sound group, **A E F I K L M O R U W X**, twelve letters that stay distinct over a microphone. To keep the recognition honest it favors precision: an ambiguous sound is treated as a miss she can repeat, never a wrong letter. Her score then uses `log2(N − 1)` for her twelve letters, so her bits are measured fairly against a 26-letter opponent. The lobby has a microphone check with a device picker and a live level meter, and Emma can only ready up once it registers her voice.
+
+The recognizer is an in-page offline engine (Vosk) constrained to those twelve letters. Two things follow from that. It listens to the exact microphone she selects rather than the operating system default, because it reads the audio stream directly from the device she chose. And constraining it to the twelve letter-sounds cuts the false hits a free recognizer makes on random letters. It needs a small speech model added to the project (see below); until that file is present, voice falls back to the browser's built-in recognizer, which works but can only use the default microphone.
+
+### Enabling the offline voice (optional one-time setup)
+
+Voice plays without it, but to get the selected-microphone, grammar-constrained recognizer, add a model:
+
+1. Download a small English Vosk model, for example `vosk-model-small-en-us-0.15` (about 40 MB) from [alphacephei.com/vosk/models](https://alphacephei.com/vosk/models).
+2. Package the model folder as a gzipped tar named `vosk-model-en.tar.gz`: `tar -czf vosk-model-en.tar.gz vosk-model-small-en-us-0.15`.
+3. Put `vosk-model-en.tar.gz` in the `assets/` folder and redeploy.
+
+The page loads it the first time you pick Emma and then recognizes entirely offline. The Vosk library itself loads from a CDN; to run fully self-contained, host `vosk-browser`'s `dist` files in `assets/` and point `VOSK_LIB_URL` in `fight.html` at them.
 
 ## Custom fighters
 

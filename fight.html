@@ -264,7 +264,7 @@
         </div>
         <div class="meter"><div class="meterfill" id="meterfill"></div><div class="thr" style="left:24%"></div></div>
         <div class="mtstat" id="mtstat">pick a microphone, press Start, then say a few letters out loud</div>
-        <div class="mtnote">Recognition uses your computer's <b>default</b> microphone. If the mic you test here is not the default, set it as default in your OS sound settings.</div>
+        <div class="mtnote" id="voskstat">the offline voice model loads in the background when you pick Emma</div>
       </div>
       <div class="seats">
         <div class="seat" id="seat1"><div class="who">Player 1 (host)</div><div class="st" id="st1">—</div><button class="kick" id="kick1" hidden>Kick out</button></div>
@@ -626,7 +626,7 @@
     curAlph = (p==="emma") ? EMMA_ALPH : ALPH;
     N = curAlph.length;
     Array.prototype.forEach.call(document.querySelectorAll(".prof"), function(b){ b.classList.toggle("sel", b.getAttribute("data-prof")===p); });
-    if(p==="emma"){ enumMics(); } else { stopMicTest(); }
+    if(p==="emma"){ enumMics(); loadVosk(); } else { stopMicTest(); }
     sendProfile(); refreshGate();
   }
   Array.prototype.forEach.call(document.querySelectorAll(".prof"), function(b){
@@ -684,15 +684,13 @@
   }
   function vstat(t){ var s=$("voicestat"); if(s) s.textContent=t; }
   function feedVoice(L){ if(running&&!ended){ $("heard").textContent=L.toUpperCase(); inputLetter(L); } }
-  function startRec(){
+  function startWeb(){                                 // fallback engine: browser Web Speech (OS default mic only)
     if(!SR){ vstat("voice needs Chrome or Edge"); return; }
     recWanted=true; sessLetters=0;
     try{
       rec=new SR(); rec.continuous=true; rec.interimResults=true; rec.lang="en-US"; rec.maxAlternatives=4;
-      rec.onstart=function(){ sessLetters=0; $("voicebar").classList.add("live"); vstat("listening (uses your default mic)"); };
+      rec.onstart=function(){ sessLetters=0; $("voicebar").classList.add("live"); vstat("listening (browser engine, default mic)"); };
       rec.onresult=function(e){
-        // rebuild the whole utterance (final + interim) and commit only letters we haven't fed yet,
-        // so continuous / yelled speech registers immediately instead of waiting for a pause.
         var full="", i; for(i=0;i<e.results.length;i++){ full+=" "+bestAlt(e.results[i]); }
         var raw=full.trim(), rw=$("voiceraw"); if(rw) rw.textContent = raw ? ("“"+raw.slice(-26)+"”") : "";
         var letters=parseSpeech(full);
@@ -703,11 +701,74 @@
         else if(ev.error==="audio-capture"){ vstat("no mic on the default device — set your working mic as default"); }
         else if(ev.error==="network"){ vstat("voice recognition needs an internet connection"); }
       };
-      rec.onend=function(){ if(recWanted){ setTimeout(function(){ if(recWanted){ try{ rec.start(); }catch(e){ try{ startRec(); }catch(_){} } } }, 200); } else { $("voicebar").classList.remove("live"); } };
+      rec.onend=function(){ if(recWanted){ setTimeout(function(){ if(recWanted){ try{ rec.start(); }catch(e){ try{ startWeb(); }catch(_){} } } }, 200); } else { $("voicebar").classList.remove("live"); } };
       rec.start();
     }catch(e){ vstat("couldn't start voice — reload and allow the mic"); }
   }
-  function stopRec(){ recWanted=false; if(rec){ try{ rec.onend=null; rec.stop(); }catch(_){} rec=null; } $("voicebar").classList.remove("live"); }
+  function stopWeb(){ recWanted=false; if(rec){ try{ rec.onend=null; rec.stop(); }catch(_){} rec=null; } }
+
+  // ---------- Emma: OFFLINE recognizer (Vosk) — listens to the SELECTED mic, grammar-constrained to her letters ----------
+  // Needs a model at assets/vosk-model-en.tar.gz (see README). Falls back to the browser engine if it is missing.
+  var VOSK_MODEL_URL="assets/vosk-model-en.tar.gz", VOSK_LIB_URL="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js";
+  var voskLibTried=false, voskModel=null, voskState="idle", voskRec=null, voskCtx=null, voskNode=null, voskStream=null, voskSess=0;
+  function setVoskStat(t){ var s=$("voskstat"); if(s) s.textContent=t||""; }
+  function voskGrammar(){                              // restrict recognition to the spoken forms of Emma's letters
+    var w={}; for(var L in SAY){ SAY[L].forEach(function(s){ if(/^[a-z]+$/.test(s)) w[s]=1; }); }
+    var list=Object.keys(w); list.push("[unk]"); return JSON.stringify(list);
+  }
+  function ensureVoskLib(cb){
+    if(window.Vosk){ cb(); return; }
+    if(voskLibTried){ cb(); return; }
+    voskLibTried=true;
+    var s=document.createElement("script"); s.src=VOSK_LIB_URL;
+    s.onload=function(){ cb(); }; s.onerror=function(){ cb(); };
+    document.head.appendChild(s);
+  }
+  function loadVosk(){                                 // start loading the offline model the moment Emma is picked
+    if(voskModel||voskState==="loading") return;
+    ensureVoskLib(function(){
+      if(!window.Vosk){ voskState="nolib"; setVoskStat("offline engine could not load — voice uses the browser engine (default mic)"); return; }
+      voskState="loading"; setVoskStat("checking for the offline voice model…");
+      fetch(VOSK_MODEL_URL,{method:"HEAD"}).then(function(r){
+        if(!r.ok) throw 0;                              // model not added yet -> fall back cleanly
+        setVoskStat("loading the offline voice model (one-time, large)…");
+        return window.Vosk.createModel(VOSK_MODEL_URL);
+      }).then(function(m){ voskModel=m; voskState="ready"; setVoskStat("offline voice ready — uses the mic you select above"); })
+        .catch(function(){ voskState="missing"; setVoskStat("offline model not found — voice uses the default mic. Add the model to use a selected mic (see README)."); });
+    });
+  }
+  function pushVosk(text, isFinal){
+    var rw=$("voiceraw"); if(rw) rw.textContent = text ? ("“"+text.slice(-26)+"”") : "";
+    var letters=parseSpeech(text);
+    if(letters.length>voskSess){ for(var j=voskSess;j<letters.length;j++) feedVoice(letters[j]); voskSess=letters.length; }
+    if(isFinal) voskSess=0;                            // utterance committed; the next partial starts fresh
+  }
+  function startVosk(){
+    voskSess=0;
+    var dev=$("micsel")?$("micsel").value:"";
+    navigator.mediaDevices.getUserMedia({audio: dev?{deviceId:{exact:dev},channelCount:1}:{channelCount:1}}).then(function(stream){
+      voskStream=stream;
+      try{ voskRec=new voskModel.KaldiRecognizer(16000, voskGrammar()); }
+      catch(e){ voskRec=new voskModel.KaldiRecognizer(16000); }
+      voskRec.on("result", function(m){ if(m&&m.result&&m.result.text) pushVosk(m.result.text, true); });
+      voskRec.on("partialresult", function(m){ if(m&&m.result&&m.result.partial!=null) pushVosk(m.result.partial, false); });
+      voskCtx=new(window.AudioContext||window.webkitAudioContext)();
+      var src=voskCtx.createMediaStreamSource(stream);
+      voskNode=voskCtx.createScriptProcessor(4096,1,1);
+      voskNode.onaudioprocess=function(e){ try{ voskRec.acceptWaveform(e.inputBuffer); }catch(_){} };
+      src.connect(voskNode); voskNode.connect(voskCtx.destination);
+      $("voicebar").classList.add("live"); vstat("listening on your selected mic (offline)");
+    }).catch(function(err){ vstat("couldn't open the selected mic ("+((err&&err.name)||"error")+")"); });
+  }
+  function stopVosk(){
+    if(voskNode){ try{ voskNode.onaudioprocess=null; voskNode.disconnect(); }catch(_){} voskNode=null; }
+    if(voskCtx){ try{ voskCtx.close(); }catch(_){} voskCtx=null; }
+    if(voskStream){ voskStream.getTracks().forEach(function(t){ t.stop(); }); voskStream=null; }
+    if(voskRec){ try{ voskRec.remove(); }catch(_){} voskRec=null; }
+  }
+  // dispatch: prefer the offline recognizer (your selected mic) once the model is loaded; else the browser engine
+  function startRec(){ $("voicebar").classList.remove("live"); if(voskModel){ startVosk(); } else { startWeb(); } }
+  function stopRec(){ stopVosk(); stopWeb(); $("voicebar").classList.remove("live"); }
 
   // ---------- Emma: microphone test (device picker + live volume) — gates Ready until the mic works ----------
   var micOk=false, micStream=null, micCtx=null, micRAF=null, MIC_FULL=0.25, MIC_THR=0.06;
