@@ -81,6 +81,14 @@ Multiply it out: `4.64 bits/sel × 3-6 /s × ≈0.95 ≈ 13-26 bits/second`, com
 - Four-letter chunks. Letters are read and struck in groups of four, which matches how typists buffer and the limits of motor chunking (Miller 1956). Chunking spreads the fixed per-action overhead and sets the attack cadence.
 - Competition, which raises both rate and accuracy for a fixed player. The next section explains why.
 
+## Why the full alphabet, not a smaller "confusion-safe" set
+
+The obvious way to raise accuracy is to drop letters that are easy to misread or mistype, keeping one of each confusable pair. We tested that idea against the objective and rejected it: for these players, in this font, the full 26 letters maximize `B`.
+
+The arithmetic is unforgiving. Near `N = 26`, removing one letter costs only about 1.3% of the per-selection yield `log2(N − 1)`, but it has to buy back at least ~0.6 percentage points of accuracy through the doubly-weighted `(2a − 1)` term just to break even, and realistic accuracy is already too high for any cut to clear that bar. The letters appear as large, isolated glyphs in a legibility-tuned monospace (SF Mono, Roboto Mono, Consolas), the exact condition under which the classic lowercase confusion clusters dissolve: those matrices (Geyer 1977; Bouma 1971; Dunn-Rankin 1968) come from briefly-flashed, degraded type, and their authors note that only the relative ordering carries over while absolute error falls far lower. Anchored to a 136-million-keystroke corpus (Dhakal et al. 2018), single-key substitution runs about 1.6%, so accuracy sits near 0.96 to 0.99.
+
+At those accuracies the `N`-bits dominate. Modeling `B` across alphabet sizes, even crediting a trimmed set a generous extra point or two of accuracy, every smaller alphabet scores lower than the full one (roughly −5% at `N = 20`, −14% at `N = 16`). The one letter with any case for removal is `i`, the textbook code-font ambiguity with `l` that also sits between `u`, `o`, and `k` on QWERTY. But even that cut fails its own test: `i` comes up one time in 26, so to recover ~0.6 points of accuracy its per-letter error rate would have to top 15%, far above the ~5 to 10% a clear monospace actually produces. The math endorses no cut. Accuracy is already high because the font is clear; the alphabet is not the lever, and all 26 letters maximize `B`.
+
 ## Why wrap it in a fight
 
 The fighting game controls the two factors a player can squander, rate and accuracy, and it turns the metric into the mechanic.
@@ -116,5 +124,10 @@ Each character is a folder of transparent frame images plus a `manifest.json`, w
 - Yerkes, R. M., & Dodson, J. D. (1908). *The relation of strength of stimulus to rapidity of habit-formation.* J. Comparative Neurology and Psychology.
 - Csikszentmihalyi, M. (1990). *Flow: The Psychology of Optimal Experience.*
 - Coupé, C., Oh, Y., Dediu, D., & Pellegrino, F. (2019). *Different languages, similar encoding efficiency: comparable information rates across the human communicative niche.* Science Advances 5(9).
+- Geyer, L. H. (1977). *Recognition and confusion of the lower-case alphabet.* Perception & Psychophysics 22(5).
+- Bouma, H. (1971). *Visual recognition of isolated lower-case letters.* Vision Research 11(5).
+- Dunn-Rankin, P. (1968). *The similarity of lower-case letters of the English alphabet.* J. Verbal Learning and Verbal Behavior 7(6).
+- Dhakal, V., Feit, A. M., Kristensson, P. O., & Oulasvirta, A. (2018). *Observations on typing from 136 million keystrokes.* CHI 2018.
+- Grudin, J. T. (1983). *Error patterns in novice and skilled transcription typing.* In Cognitive Aspects of Skilled Typewriting.
 
 MIT licensed. See [LICENSE](LICENSE).
