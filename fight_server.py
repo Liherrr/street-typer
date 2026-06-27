@@ -5,7 +5,7 @@ no model, no microphone.  Typing is exact in the browser, so this process is onl
 referee between the two players' browsers.
 
 How two testers connect with zero fuss:
-  - Each runs run.sh / run.ps1.
+  - Each runs: python fight_server.py
   - The FIRST instance becomes the HOST (starts the web server + a UDP discovery responder).
   - The SECOND instance broadcasts on the LAN, finds the host automatically, and just opens the
     fight in its browser -- no IP typing.
@@ -121,7 +121,7 @@ def discover_host(timeout=1.5):
 
 
 def start_host_responder(port):
-    """Reply to LAN discovery probes with our ip:port so the other launcher can auto-join."""
+    """Reply to LAN discovery probes with our ip:port so the other machine can auto-join."""
     def run():
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -478,7 +478,7 @@ def main():
         start_host_responder(args.port)
         print("=" * 64)
         print(" STREET TYPER  -  you are the HOST (Player 1). Browser opens automatically.")
-        print(" Player 2 (other computer): run the launcher -> it auto-joins. If that fails,")
+        print(" Player 2 (other computer): run python fight_server.py -> it auto-joins. If that fails,")
         print(" open ONE of these on the other computer (try in order until one loads):")
         for ip in all_ipv4():
             print("        http://%s:%d/" % (ip, args.port))
