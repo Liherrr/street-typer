@@ -341,7 +341,7 @@ class Match:
         self._clear_bot()
         self.ready = {1: False, 2: False}
         self.net = {1: 0.0, 2: 0.0}; self.peak = {1: 0.0, 2: 0.0}
-        self.sc = {1: 0, 2: 0}; self.si = {1: 0, 2: 0}
+        self.sc = {1: 0, 2: 0}; self.si = {1: 0, 2: 0}; self.npc = {1: N, 2: N}   # clear per-player alphabets between rounds
         self.state = "lobby"; self.start_time = None; self.winner = None
         if self.timer:
             self.timer.cancel(); self.timer = None
