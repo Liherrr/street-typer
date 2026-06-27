@@ -345,7 +345,7 @@
 (function(){
   "use strict";
   var ALPH="abcdefghijklmnopqrstuvwxyz";
-  var EMMA_ALPH="aefiklmoruwx";   // Emma speaks: one acoustically-distinct letter per confusion cluster (E-set etc. dropped)
+  var EMMA_ALPH="abcdefghijklmnopqrstuvwxyz";   // Emma speaks the full 26: a forced-choice recognizer maps each utterance to the closest letter, so N stays high
   var curAlph=ALPH, profile="calvin";
   var N=26, DURATION=60, GROUP=4, GROUPS_PER_ROW=6, ROWLEN=GROUP*GROUPS_PER_ROW;
   var seq=[], res=[], idx=0, sc=0, si=0, combo=0, bestCombo=0;
@@ -663,22 +663,36 @@
     }
   }
 
-  // ---------- Emma: voice input via the browser speech recognizer ----------
+  // ---------- Emma: voice input — forced choice over the 26 letters (closest letter to what was said) ----------
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, recWanted=false, sessLetters=0;
-  var SAY={a:["a","ay","eh","hey","ah","hay"],e:["e","ee","each","eat","easy","eee"],f:["f","ef","eff","if"],
-    i:["i","eye","aye","hi","ai"],k:["k","kay","okay","ok","cake","que"],l:["l","el","elle","ell","hell"],
-    m:["m","em","am","hmm","mm"],o:["o","oh","owe","oak"],r:["r","are","ar","art","our"],
-    u:["u","you","ewe","yew","ooh"],w:["w","dub","wuh","whu","dubya"],x:["x","ex","eks","ax","axe","acts"]};
-  var WORD2LET={}; for(var _L in SAY){ SAY[_L].forEach(function(w){ WORD2LET[w]=_L; }); }
-  function snapToken(tok){                           // map ONE recognized word to a letter in Emma's set, or nothing
-    tok=(tok||"").toLowerCase().replace(/[^a-z]/g,"");
-    if(WORD2LET[tok]) return WORD2LET[tok];          // an exact letter-sound (e.g. "ef" -> f, "you" -> u)
-    if(tok.length===1 && EMMA_ALPH.indexOf(tok)>=0) return tok;
-    return null;                                     // ambiguous -> a miss, never a wrong hit (precision over recall)
+  // every letter with the spoken names a recognizer tends to return. This doubles as the Vosk grammar
+  // (recognition is restricted to these words), so each utterance is forced to the nearest of the 26 letters.
+  var SAY={
+    a:["a","ay","eh","hey"], b:["b","be","bee","bea"], c:["c","see","sea","cee"], d:["d","dee","de"],
+    e:["e","ee","eee"], f:["f","ef","eff"], g:["g","gee","jee"], h:["h","aitch","haitch","age"],
+    i:["i","eye","aye"], j:["j","jay","jae"], k:["k","kay","cay"], l:["l","el","elle","ell"],
+    m:["m","em","emm"], n:["n","en","enn"], o:["o","oh","owe"], p:["p","pee","pea"],
+    q:["q","cue","queue","kew"], r:["r","are","ar"], s:["s","es","ess"], t:["t","tee","tea"],
+    u:["u","you","yu","ewe"], v:["v","vee","ve"], w:["w","double u","dub","dubya"], x:["x","ex","eks","ax"],
+    y:["y","why","wy","wai"], z:["z","zee","zed","zi"]};
+  var WORD2LET={}, SAY_WORDS=[]; for(var _L in SAY){ SAY[_L].forEach(function(w){ WORD2LET[w]=_L; SAY_WORDS.push(w); }); }
+  function _sim(a,b){                                 // 0..1 string similarity (normalised edit distance)
+    var la=a.length, lb=b.length; if(!la||!lb) return 0;
+    var prev=[], cur=[], i, j; for(j=0;j<=lb;j++) prev[j]=j;
+    for(i=1;i<=la;i++){ cur[0]=i; for(j=1;j<=lb;j++){ var c=a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1; cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+c); } for(j=0;j<=lb;j++) prev[j]=cur[j]; }
+    return 1 - prev[lb]/Math.max(la,lb);
   }
-  function parseSpeech(s){                            // a chunk of recognized speech -> the letters it clearly contains
+  function closestLetter(tok){                        // forced choice: the letter whose name is nearest to what was said
+    tok=(tok||"").toLowerCase().replace(/[^a-z]/g,"");
+    if(!tok) return null;
+    if(WORD2LET[tok]) return WORD2LET[tok];            // an exact letter-name
+    if(tok.length===1 && curAlph.indexOf(tok)>=0) return tok;
+    var best=null, bestScore=0, k; for(k=0;k<SAY_WORDS.length;k++){ var s=_sim(tok,SAY_WORDS[k]); if(s>bestScore){ bestScore=s; best=WORD2LET[SAY_WORDS[k]]; } }
+    return bestScore>=0.5 ? best : null;              // map to the nearest letter unless it is clearly not a letter at all
+  }
+  function parseSpeech(s){                            // a chunk of recognized speech -> the letters it maps to
     s=(s||"").toLowerCase().replace(/[.,!?]/g,"").replace(/double[\s-]*(you|u|ya)/g," w ");
-    var out=[]; s.split(/[\s-]+/).forEach(function(tok){ var L=snapToken(tok); if(L) out.push(L); });
+    var out=[]; s.split(/[\s-]+/).forEach(function(tok){ var L=closestLetter(tok); if(L) out.push(L); });
     return out;
   }
   function bestAlt(r){                                // among the recognizer's guesses, take the one with the most clear letters
