@@ -233,6 +233,11 @@
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
   .mictest[hidden]{display:none}
+  .nrow{margin-top:12px; padding-top:11px; border-top:1px solid var(--line); font-family:var(--mono); font-size:12px; color:#aab4c6}
+  .nrow .nhint{color:#7c8aa0}
+  .nctl{display:flex; align-items:center; gap:11px; margin-top:7px}
+  .nctl input[type=range]{flex:1; accent-color:var(--lamp); cursor:pointer}
+  .nctl output{min-width:3.4em; text-align:right; font-weight:800; color:#ffd23f; font-size:14px}
   .mthead{font-family:var(--mono); font-size:12px; color:#aab4c6; margin:0 0 10px}
   .mtrow{display:flex; gap:10px; align-items:center; margin-bottom:11px; flex-wrap:wrap}
   .micsel{flex:1; min-width:150px; font-family:var(--mono); font-size:12px; color:#dbe2ee; background:#0c1422; border:1px solid var(--line); border-radius:8px; padding:7px 9px}
@@ -275,6 +280,10 @@
         <div class="meter"><div class="meterfill" id="meterfill"></div><div class="thr" style="left:24%"></div></div>
         <div class="mtstat" id="mtstat">checking your microphone, say a few letters out loud</div>
         <div class="mtnote" id="voskstat">the offline voice model loads in the background when you pick Emma</div>
+        <div class="nrow">
+          <div>Word-bank size N <span class="nhint">&middot; benchmark: how many words the recognizer must tell apart (26 = the curated set)</span></div>
+          <div class="nctl"><input type="range" id="nslider" min="26" max="3000" step="1" value="26"><output id="nval">26</output></div>
+        </div>
       </div>
       <div class="seats">
         <div class="seat" id="seat1"><div class="who">Player 1 (host)</div><div class="st" id="st1">—</div><button class="kick" id="kick1" hidden>Kick out</button></div>
@@ -351,11 +360,11 @@
   </div>
 </div>
 
+<script src="assets/wordbank.js"></script>
 <script>
 (function(){
   "use strict";
   var ALPH="abcdefghijklmnopqrstuvwxyz";
-  var EMMA_ALPH="abcdefghijklmnopqrstuvwxyz";   // Emma speaks all 26 bare letters; the grammar forces each utterance to the closest one in the pool
   var curAlph=ALPH, profile="calvin";
   var N=26, DURATION=60, GROUP=4, GROUPS_PER_ROW=6, ROWLEN=GROUP*GROUPS_PER_ROW;
   var seq=[], res=[], idx=0, sc=0, si=0, combo=0, bestCombo=0;
@@ -398,7 +407,7 @@
   function koSnd(){if(!actx)return;var t=actx.currentTime;[0,.09,.18].forEach(function(d,i){blip(t+d,440/(i+1),"triangle",.12,.22);});}
 
   // ---------- sequence + render ----------
-  function randCh(){return curAlph[(Math.random()*curAlph.length)|0];}
+  function randCh(){ if(profile==="emma") return emmaWords[(Math.random()*emmaWords.length)|0]; return curAlph[(Math.random()*curAlph.length)|0]; }
   function ensureBuf(){while(seq.length<idx+2*ROWLEN+2)seq.push(randCh());}
   function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;bestCombo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;ensureBuf();}
   function buildRow(start,isCur){var h="";for(var c=0;c<ROWLEN;c++){var i=start+c,cls="ch"+(c>0&&c%GROUP===0?" gap":""),ch="&nbsp;";
@@ -406,7 +415,7 @@
     h+='<span class="'+cls+'">'+ch+'</span>';}return h;}
   var WROW=GROUP*2;                                   // Emma's word sheet: 2 blocks (8 words) per row
   function buildWordRow(start,isCur){var h="";for(var c=0;c<WROW;c++){var i=start+c,cls="wd"+(c>0&&c%GROUP===0?" gap":""),w="&nbsp;";
-    if(i>=0&&seq[i]!=null){w=WORDBANK[seq[i]]||seq[i];if(i<idx)cls+=(res[i]==="ok"?" done":" bad");else if(isCur&&i===idx)cls+=" cur";}
+    if(i>=0&&seq[i]!=null){w=seq[i];if(i<idx)cls+=(res[i]==="ok"?" done":" bad");else if(isCur&&i===idx)cls+=" cur";}
     h+='<span class="'+cls+'">'+w+'</span>';}return h;}
   function render(){
     if(profile==="emma"){var ws=Math.floor(idx/WROW)*WROW;        // words instead of letters: read-and-say each one
@@ -619,7 +628,7 @@
   }
   function inputLetter(k){                          // one accepted selection: a keypress, or a recognized spoken letter
     if(!running||ended) return;
-    if(curAlph.indexOf(k)===-1) return;             // ignore anything outside the active alphabet
+    if(profile==="emma" ? !bankSet[k] : curAlph.indexOf(k)===-1) return;   // ignore anything outside the active pool
     var t=seq[idx], ok=(k===t);
     if(ok){ res[idx]="ok"; sc++; combo++; if(combo>bestCombo)bestCombo=combo; blockC++; thock(combo); }
     else { res[idx]="bad"; si++; combo=0; blockW++; buzz(); flashStage(true); }
@@ -642,8 +651,8 @@
   function sendProfile(){ if(you) post({t:"profile", n:N}); }   // tell the server our alphabet size, for honest bits
   function setProfile(p){
     profile=p;
-    curAlph = (p==="emma") ? EMMA_ALPH : ALPH;
-    N = curAlph.length;
+    curAlph = ALPH;
+    N = (p==="emma") ? emmaN : curAlph.length;   // Emma scores over her word bank (size N from the slider); typers over 26 letters
     Array.prototype.forEach.call(document.querySelectorAll(".prof"), function(b){ b.classList.toggle("sel", b.getAttribute("data-prof")===p); });
     if(p==="emma"){ enumMics(); loadVosk(); startMicTest(); } else { stopMicTest(); }   // mic check runs automatically
     sendProfile(); refreshGate();
@@ -697,26 +706,30 @@
 
   // ---------- Emma: voice input — forced choice over the 26 letters (closest letter to what was said) ----------
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, recWanted=false, sessLetters=0;
-  // One common, monosyllabic, mutually-distinct word per letter, DISPLAYED in place of the letter so there is no mental
-  // mapping: the word IS the cue, you just read it and say it. Monosyllables keep the speaking rate near letter speed, and
-  // the distinctness (different onset / vowel / coda, no rhymes, none on the "ee" of the E-set) is what a small recognizer
-  // needs. Chosen for mutual acoustic distance and for sitting in the Vosk small en-US lexicon. The bank is the grammar.
-  var WORDBANK={a:"ant",b:"book",c:"cat",d:"dog",e:"egg",f:"fish",g:"gun",h:"horse",i:"ice",j:"jet",
-    k:"kite",l:"leaf",m:"moon",n:"nose",o:"ox",p:"pot",q:"quit",r:"rope",s:"snake",t:"tooth",
-    u:"up",v:"van",w:"wolf",x:"box",y:"yarn",z:"zoo"};
-  var WORD2SYM={}, BANK_WORDS=[]; for(var _b in WORDBANK){ WORD2SYM[WORDBANK[_b]]=_b; BANK_WORDS.push(WORDBANK[_b]); }
+  // Emma's symbols ARE words, shown in the box and read aloud (no mental mapping). The bank is one ordered list: the 26
+  // curated, mutually-distinct monosyllables first (the best, near-99% set), then common words by frequency. The size slider
+  // sweeps N from 26 to 3000 for benchmarking; the active bank is always the first N words, and that bank IS the recognizer
+  // grammar (forced choice). Bigger N buys log2(N-1) bits per word but packs the words closer, which lowers accuracy.
+  var WB_FALLBACK=["ant","book","cat","dog","egg","fish","gun","horse","ice","jet","kite","leaf","moon","nose","ox",
+    "pot","quit","rope","snake","tooth","up","van","wolf","box","yarn","zoo"];
+  var WORDBANK_FULL=(window.WORDBANK_FULL&&window.WORDBANK_FULL.length>=26)?window.WORDBANK_FULL:WB_FALLBACK;
+  var emmaN=26, emmaWords=WORDBANK_FULL.slice(0,emmaN), bankSet=Object.create(null);
+  function rebuildBank(){ bankSet=Object.create(null); for(var i=0;i<emmaWords.length;i++) bankSet[emmaWords[i]]=1; }
+  rebuildBank();
+  function setEmmaN(n){ n=Math.max(26,Math.min(WORDBANK_FULL.length,n|0)); emmaN=n; emmaWords=WORDBANK_FULL.slice(0,n);
+    rebuildBank(); if(profile==="emma") N=n; var v=$("nval"); if(v) v.textContent=n; }
   function _sim(a,b){                                 // 0..1 string similarity (normalised edit distance)
     var la=a.length, lb=b.length; if(!la||!lb) return 0;
     var prev=[], cur=[], i, j; for(j=0;j<=lb;j++) prev[j]=j;
     for(i=1;i<=la;i++){ cur[0]=i; for(j=1;j<=lb;j++){ var c=a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1; cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+c); } for(j=0;j<=lb;j++) prev[j]=cur[j]; }
     return 1 - prev[lb]/Math.max(la,lb);
   }
-  function closestLetter(tok){                        // forced choice: the bank word nearest to what was said -> its letter
+  function closestLetter(tok){                        // forced choice: snap what was said to the nearest word in the active bank
     tok=(tok||"").toLowerCase().replace(/[^a-z]/g,"");
     if(!tok) return null;
-    if(WORD2SYM[tok]) return WORD2SYM[tok];            // an exact bank word (what the grammar-locked recognizer returns)
+    if(bankSet[tok]) return tok;                       // an exact bank word (what the grammar-locked recognizer returns)
     var best=null, bestScore=0, k;                      // otherwise snap to the nearest bank word (Web Speech fallback path)
-    for(k=0;k<BANK_WORDS.length;k++){ var s=_sim(tok,BANK_WORDS[k]); if(s>bestScore){ bestScore=s; best=WORD2SYM[BANK_WORDS[k]]; } }
+    for(k=0;k<emmaWords.length;k++){ var s=_sim(tok,emmaWords[k]); if(s>bestScore){ bestScore=s; best=emmaWords[k]; } }
     return bestScore>=0.45 ? best : null;
   }
   function parseSpeech(s){                            // a chunk of recognized speech -> the letters its words map to
@@ -730,7 +743,7 @@
     return best;
   }
   function vstat(t){ var s=$("voicestat"); if(s) s.textContent=t; }
-  function feedVoice(L){ if(running&&!ended){ $("heard").textContent="→ "+(WORDBANK[L]||L).toUpperCase(); inputLetter(L); } }   // show the word it landed on
+  function feedVoice(W){ if(running&&!ended){ $("heard").textContent="→ "+(W||"").toUpperCase(); inputLetter(W); } }   // W is a bank word: show it and score it
   function startWeb(){                                 // fallback engine: browser Web Speech (OS default mic only)
     if(!SR){ vstat("voice needs Chrome or Edge"); return; }
     recWanted=true; sessLetters=0;
@@ -759,7 +772,7 @@
   var VOSK_MODEL_URL="assets/vosk-model-en.tar.gz", VOSK_LIB_URL="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js";
   var voskLibTried=false, voskModel=null, voskState="idle", voskRec=null, voskCtx=null, voskNode=null, voskStream=null, voskSess=0;
   function setVoskStat(t){ var s=$("voskstat"); if(s) s.textContent=t||""; }
-  function voskGrammar(){ return JSON.stringify(BANK_WORDS); }   // recognize ONLY the 26 bank words, nothing else (no "[unk]")
+  function voskGrammar(){ return JSON.stringify(emmaWords); }   // recognize ONLY the active bank (the first N words), no "[unk]"
   function ensureVoskLib(cb){
     if(window.Vosk){ cb(); return; }
     if(voskLibTried){ cb(); return; }
@@ -924,6 +937,10 @@
   $("readyBtn").addEventListener("click", doReady);
   function doKick(){ post({t:"kick"}); }
   ["kick1","kick2"].forEach(function(id){ var b=$(id); if(b) b.addEventListener("click", doKick); });
+  (function(){ var ns=$("nslider"); if(!ns) return;                 // word-bank size slider (Emma benchmark)
+    ns.addEventListener("input", function(){ setEmmaN(parseInt(this.value,10)); });
+    ns.addEventListener("change", function(){ if(you) sendProfile(); });   // tell the server the new N on release
+  })();
   function onKicked(){ stopRec(); try{ if(es) es.close(); }catch(e){} $("kickedOverlay").classList.add("on"); }
   function chooseSolo(bps){ soloBps=bps; aud(); sendProfile(); post({t:"solo", bps:bps}); }
   Array.prototype.forEach.call(document.querySelectorAll(".btn.solo"), function(b){

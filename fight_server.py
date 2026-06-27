@@ -45,6 +45,7 @@ DISC_MAGIC = b"BITRATE_BRAWL_DISCOVER"
 DISC_REPLY = b"BITRATE_BRAWL_HOST "
 
 N = 26
+MAX_N = 3000                           # ceiling for a per-player pool; Emma's voice mode can sweep N up to here to benchmark
 BIT_PER_CHAR = math.log2(N - 1)        # 4.64 bits per correct letter
 DURATION = 60.0
 HP_MAX = round(20.0 * DURATION)         # 1200: only a ~20 bps run can deplete it in 60 s
@@ -235,7 +236,7 @@ class Match:
         # the client reports its alphabet size (Calvin/Elizabeth = 26, Emma's spoken set is smaller)
         with self.lock:
             if pid in (1, 2):
-                self.npc[pid] = max(2, min(N, int(n)))
+                self.npc[pid] = max(2, min(MAX_N, int(n)))
 
     def set_ready(self, pid, val):
         with self.lock:
@@ -290,7 +291,7 @@ class Match:
         with self.lock:
             if self.state != "fight":
                 return
-            self.npc[pid] = max(2, min(N, int(n)))
+            self.npc[pid] = max(2, min(MAX_N, int(n)))
             correct = max(0, int(correct)); wrong = max(0, int(wrong))
             self.sc[pid] += correct
             self.si[pid] += wrong
