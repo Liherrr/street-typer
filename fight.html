@@ -341,8 +341,9 @@
       <div class="pcol" id="colOpp"><div class="ttl">Rival</div><div class="bwrap"><span class="b" id="bopp">0.00</span><span class="bunit">b/s</span></div><div class="sub" id="subopp">Sc 0 · Si 0</div></div>
     </div>
     <div class="formula" id="endFormula"></div>
-    <div class="row" style="justify-content:center">
+    <div class="row" style="justify-content:center; gap:12px">
       <button class="btn" id="rematchBtn">Rematch</button>
+      <button class="btn ghost" id="menuBtn">Main menu</button>
     </div>
   </div>
 </div>
@@ -926,6 +927,7 @@
     b.addEventListener("click", function(){ chooseSolo(parseInt(b.getAttribute("data-bps"),10)); });
   });
   $("rematchBtn").addEventListener("click", function(){ sendProfile(); if(soloMatch){ post({t:"solo", bps:soloBps||10}); } else { post({t:"rematch"}); } });
+  $("menuBtn").addEventListener("click", function(){ location.reload(); });   // leave the match, back to the title page
   document.addEventListener("keydown", onKey);
   window.addEventListener("resize", fitSheet);
 
