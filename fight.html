@@ -215,6 +215,7 @@
   .voicebar .micdot{width:9px; height:9px; border-radius:50%; background:#ff5a46; box-shadow:0 0 8px #ff5a46}
   .voicebar.live .micdot{background:#56e3c9; box-shadow:0 0 10px #56e3c9; animation:micpulse 1.1s ease-in-out infinite}
   @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .voicebar .vraw{font-style:italic; color:#6b7686; max-width:13em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
   .voicebar .heard{font-weight:800; color:#ffd23f; text-transform:uppercase; min-width:1.4em; text-align:left}
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
@@ -230,6 +231,8 @@
   .meter .thr{position:absolute; top:-2px; bottom:-2px; width:2px; background:rgba(255,210,63,.85)}
   .mtstat{font-family:var(--mono); font-size:11.5px; color:#8b96a8; margin-top:9px}
   .mtstat.ok{color:#56e3c9} .mtstat.warn{color:#ffb24d}
+  .mtnote{font-family:var(--mono); font-size:10.5px; line-height:1.5; color:#6b7686; margin-top:7px}
+  .mtnote b{color:#aab4c6}
 </style>
 </head>
 <body>
@@ -258,6 +261,7 @@
         </div>
         <div class="meter"><div class="meterfill" id="meterfill"></div><div class="thr" style="left:24%"></div></div>
         <div class="mtstat" id="mtstat">pick a microphone, press Start, then say a few letters out loud</div>
+        <div class="mtnote">Recognition uses your computer's <b>default</b> microphone. If the mic you test here is not the default, set it as default in your OS sound settings.</div>
       </div>
       <div class="seats">
         <div class="seat" id="seat1"><div class="who">Player 1 (host)</div><div class="st" id="st1">—</div><button class="kick" id="kick1" hidden>Kick out</button></div>
@@ -308,7 +312,7 @@
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
       </div>
       <div class="hint" id="hint">type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes</div>
-      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="heard" id="heard"></span></div>
+      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span></div>
     </div>
   </section>
 </div>
@@ -653,11 +657,11 @@
   }
 
   // ---------- Emma: voice input via the browser speech recognizer ----------
-  var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, recWanted=false;
-  var SAY={a:["a","ay","eh","hey"],e:["e","ee","each","eat","easy"],f:["f","ef","eff","if","half"],
-    i:["i","eye","aye","hi","ai"],k:["k","kay","okay","cake","kay."],l:["l","el","elle","ell","hell","love"],
-    m:["m","em","am","hmm","mm"],o:["o","oh","owe","oak","old"],r:["r","are","ar","art","our"],
-    u:["u","you","ewe","yu","ooh"],w:["w","double u","dub","whu","wuh"],x:["x","ex","eks","ax","acts","axe"]};
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, recWanted=false, sessLetters=0;
+  var SAY={a:["a","ay","eh","hey","ah","hay"],e:["e","ee","each","eat","easy","eee"],f:["f","ef","eff","if"],
+    i:["i","eye","aye","hi","ai"],k:["k","kay","okay","ok","cake","que"],l:["l","el","elle","ell","hell"],
+    m:["m","em","am","hmm","mm"],o:["o","oh","owe","oak"],r:["r","are","ar","art","our"],
+    u:["u","you","ewe","yew","ooh"],w:["w","dub","wuh","whu","dubya"],x:["x","ex","eks","ax","axe","acts"]};
   var WORD2LET={}; for(var _L in SAY){ SAY[_L].forEach(function(w){ WORD2LET[w]=_L; }); }
   function snapToken(tok){                           // map ONE recognized word to a letter in Emma's set, or nothing
     tok=(tok||"").toLowerCase().replace(/[^a-z]/g,"");
@@ -666,31 +670,41 @@
     return null;                                     // ambiguous -> a miss, never a wrong hit (precision over recall)
   }
   function parseSpeech(s){                            // a chunk of recognized speech -> the letters it clearly contains
-    s=(s||"").toLowerCase().replace(/[.,!?]/g,"")
-      .replace(/double[\s-]*(you|u|ya)/g," w ");      // "double u" / "double you" -> W (one token)
+    s=(s||"").toLowerCase().replace(/[.,!?]/g,"").replace(/double[\s-]*(you|u|ya)/g," w ");
     var out=[]; s.split(/[\s-]+/).forEach(function(tok){ var L=snapToken(tok); if(L) out.push(L); });
     return out;
   }
-  function feedVoice(L){ if(running&&!ended){ $("heard").textContent=L; inputLetter(L); } }
-  function startRec(){
-    if(!SR){ $("voicestat").textContent="voice needs Chrome or Edge"; return; }
-    recWanted=true;
-    rec=new SR(); rec.continuous=true; rec.interimResults=true; rec.lang="en-US"; rec.maxAlternatives=1;
-    rec.onstart=function(){ $("voicebar").classList.add("live"); $("voicestat").textContent="listening — say the letters"; };
-    rec.onerror=function(e){ if(e.error==="not-allowed"||e.error==="service-not-allowed"){ recWanted=false; $("voicestat").textContent="microphone blocked — allow it and reload"; } };
-    rec.onend=function(){ $("voicebar").classList.remove("live"); if(recWanted){ try{ rec.start(); }catch(_){} } };
-    rec.onresult=function(e){
-      var interim="";
-      for(var i=e.resultIndex;i<e.results.length;i++){
-        var r=e.results[i];
-        if(r.isFinal){ parseSpeech(r[0].transcript).forEach(feedVoice); }   // commit clear letters
-        else interim+=r[0].transcript+" ";                                  // interim: just live feedback
-      }
-      var tail=parseSpeech(interim); if(tail.length) $("heard").textContent=tail[tail.length-1];
-    };
-    try{ rec.start(); }catch(_){}
+  function bestAlt(r){                                // among the recognizer's guesses, take the one with the most clear letters
+    var best=r[0].transcript, bestN=parseSpeech(best).length, a;
+    for(a=1;a<r.length;a++){ var n=parseSpeech(r[a].transcript).length; if(n>bestN){ bestN=n; best=r[a].transcript; } }
+    return best;
   }
-  function stopRec(){ recWanted=false; if(rec){ try{ rec.stop(); }catch(_){} rec=null; } $("voicebar").classList.remove("live"); }
+  function vstat(t){ var s=$("voicestat"); if(s) s.textContent=t; }
+  function feedVoice(L){ if(running&&!ended){ $("heard").textContent=L.toUpperCase(); inputLetter(L); } }
+  function startRec(){
+    if(!SR){ vstat("voice needs Chrome or Edge"); return; }
+    recWanted=true; sessLetters=0;
+    try{
+      rec=new SR(); rec.continuous=true; rec.interimResults=true; rec.lang="en-US"; rec.maxAlternatives=4;
+      rec.onstart=function(){ sessLetters=0; $("voicebar").classList.add("live"); vstat("listening (uses your default mic)"); };
+      rec.onresult=function(e){
+        // rebuild the whole utterance (final + interim) and commit only letters we haven't fed yet,
+        // so continuous / yelled speech registers immediately instead of waiting for a pause.
+        var full="", i; for(i=0;i<e.results.length;i++){ full+=" "+bestAlt(e.results[i]); }
+        var raw=full.trim(), rw=$("voiceraw"); if(rw) rw.textContent = raw ? ("“"+raw.slice(-26)+"”") : "";
+        var letters=parseSpeech(full);
+        if(letters.length>sessLetters){ for(var j=sessLetters;j<letters.length;j++) feedVoice(letters[j]); sessLetters=letters.length; }
+      };
+      rec.onerror=function(ev){
+        if(ev.error==="not-allowed"||ev.error==="service-not-allowed"){ recWanted=false; vstat("microphone blocked — allow it and reload"); }
+        else if(ev.error==="audio-capture"){ vstat("no mic on the default device — set your working mic as default"); }
+        else if(ev.error==="network"){ vstat("voice recognition needs an internet connection"); }
+      };
+      rec.onend=function(){ if(recWanted){ setTimeout(function(){ if(recWanted){ try{ rec.start(); }catch(e){ try{ startRec(); }catch(_){} } } }, 200); } else { $("voicebar").classList.remove("live"); } };
+      rec.start();
+    }catch(e){ vstat("couldn't start voice — reload and allow the mic"); }
+  }
+  function stopRec(){ recWanted=false; if(rec){ try{ rec.onend=null; rec.stop(); }catch(_){} rec=null; } $("voicebar").classList.remove("live"); }
 
   // ---------- Emma: microphone test (device picker + live volume) — gates Ready until the mic works ----------
   var micOk=false, micStream=null, micCtx=null, micRAF=null, MIC_FULL=0.25, MIC_THR=0.06;
