@@ -21,7 +21,7 @@ The game is scored by a single number: the information transfer rate the player 
 B = log2(N − 1) · max(Sc − Si, 0) / t          [bits / second]
 ```
 
-`N` is the alphabet size; `Sc` and `Si` are the counts of correct and incorrect selections; `t` is elapsed seconds. A selection drawn uniformly from `N` options carries up to `log2 N` bits. The conservative `N − 1` and the `max(·, 0)` floor treat an error as forfeiting a selection's worth of credit rather than refunding it.
+`N` is the alphabet size; `Sc` and `Si` are the counts of correct and incorrect selections; `t` is elapsed seconds. A selection drawn uniformly from `N` options carries up to `log2 N` bits. The conservative `N − 1` and the `max(·, 0)` floor make an error forfeit a selection's worth of credit.
 
 The formula factors into the only three quantities a player can change:
 
@@ -35,7 +35,7 @@ B = log2(N − 1) · R · (2a − 1) ,   R = (Sc + Si) / t ,   a = Sc / (Sc + Si
 
 To maximize `B` you have to push all three at once, and they trade against each other. The best modality is the one that happens to sit high on all three for the specific person playing.
 
-## The bottleneck is output, not input
+## Output is the bottleneck
 
 A round is a sequence of selections the player produces, so the binding constraint is output bandwidth. Reading the next target costs almost nothing: vision is the fastest channel into a person, and recognizing a symbol already on the screen is close to instant. So the game shows the targets plainly, reading never gates the loop, and the player's whole budget goes into output. That leaves one question: which output channel maximizes `B`?
 
@@ -45,7 +45,7 @@ Speech is the highest-bandwidth human output in ordinary use, about 39 bits per 
 
 That 39 bits per second is entropy *given context*. Most of it is predictable from the preceding words and is carried cheaply by the listener's language model across multi-syllable chunks. Our source is i.i.d. uniform, so by construction there is no context to predict from. Take the language model away and two limits bind:
 
-1. Production rate. Reading random tokens aloud, a speaker sustains about 2 to 3 distinct utterances per second, not the 5 to 6 syllables per second of connected speech.
+1. Production rate. Reading random tokens aloud, a speaker sustains about 2 to 3 distinct utterances per second, well below the 5 to 6 syllables per second of connected speech.
 2. Recognition. The recognizer is a noisy channel with its own speed-accuracy tradeoff. We built several: free-transcription digits, vowels, a forced-choice recognizer over a swappable pool, and a continuous LocalAgreement streaming decoder on a fine-tuned small ASR model. On fast, accented, i.i.d. tokens, exact-match accuracy fell to 0.70 to 0.86, and the smallest models dropped into repeat-loops on monotonic input. Even 0.85 accuracy pulls the `(2a − 1)` multiplier down to 0.70.
 
 End to end we measured about 5 bits per second, with an analyzed ceiling near 8. We also pushed on the alphabet axis directly and checked the estimates adversarially:
@@ -66,15 +66,15 @@ Every spoken option lands around 4 to 6 bits per second because the three factor
 
 The people who will play this are professional software engineers, and for them the keyboard is an overlearned motor program built from years of daily use. That overlearning pays off in all three factors at once.
 
-Accuracy comes from an exact channel. A keypress *is* the symbol; nothing has to recognize it. The full `log2 N` bits per keystroke survive, and `2a − 1` is set by the fingers (around 0.95 to 1.0), not by what a model can decode. This is the largest single gap between typing and speech.
+Accuracy comes from an exact channel. A keypress *is* the symbol; nothing has to recognize it. The full `log2 N` bits per keystroke survive, and `2a − 1` is set by the fingers, around 0.95 to 1.0, with no model in the loop to erode it. This is the largest single gap between typing and speech.
 
 Bits per selection stay cheap because there is no Hick-Hyman tax. Choice reaction time grows with the information in the choice, `RT = a + b·log2 N` (Hick 1952; Hyman 1953), but only for unfamiliar choices. Overlearning drives the slope `b` toward zero: a touch-typist does not deliberate among 26 keys, because the path from seeing a letter to pressing it is automatic. So `N = 26` (`log2 25 = 4.64` bits per selection) costs almost no extra time, where an unpracticed mapping would pay in proportion to `log2 N`.
 
-Rate comes from the same automaticity. On random letters, which deny typists the word-level motor programs and anticipation that make prose fast, fluent typists still hold about 3 to 6 keystrokes per second, with the binding limit being finger transport time rather than any decision cost. That transport time is governed by Fitts's law (Fitts 1954), which touch-typing keeps small by anchoring on the home row.
+Rate comes from the same automaticity. On random letters, which deny typists the word-level motor programs and anticipation that make prose fast, fluent typists still hold about 3 to 6 keystrokes per second. The limit is finger transport, governed by Fitts's law (Fitts 1954), which touch-typing keeps small by anchoring on the home row.
 
 Multiply it out: `4.64 bits/sel × 3-6 /s × ≈0.95 ≈ 13-26 bits/second`, comfortably past the 8 bits per second speech ceiling. A casual but accurate typist already measures 10 to 15; a fast one runs well above 25. Reading keeps up easily, since the eyes pull in the next letters through the fastest input channel a person has.
 
-The keyboard has to be physical, not an on-screen phone keyboard, for the same reason: more of the body is in play. A full keyboard spreads the work across up to ten fingers with real key travel, where a phone leans on one or two thumbs. The gap is large and measured. In a study of 37,000 typists, mobile input averaged about 36 words per minute against roughly 52 on a physical keyboard, and the number of fingers tracked the speed directly: two thumbs beat two index fingers, which beat a single finger (Palin et al. 2019; Dhakal et al. 2018). More fingers and more movement raise `R`, and a higher `R` raises `B`.
+The keyboard has to be physical for the same reason: more of the body is in play than on a phone screen. A full keyboard spreads the work across up to ten fingers with real key travel, where a phone leans on one or two thumbs. The gap is large and measured. In a study of 37,000 typists, mobile input averaged about 36 words per minute against roughly 52 on a physical keyboard, and the number of fingers tracked the speed directly: two thumbs beat two index fingers, which beat a single finger (Palin et al. 2019; Dhakal et al. 2018). More fingers and more movement raise `R`, and a higher `R` raises `B`.
 
 ## Design choices behind the measurement
 
@@ -84,7 +84,7 @@ The keyboard has to be physical, not an on-screen phone keyboard, for the same r
 - Four-letter chunks. Letters are read and struck in groups of four, which matches how typists buffer and the limits of motor chunking (Miller 1956). Chunking spreads the fixed per-action overhead and sets the attack cadence.
 - Competition, which raises both rate and accuracy for a fixed player. The next section explains why.
 
-## Why the full alphabet, not a smaller "confusion-safe" set
+## Why the full alphabet
 
 The obvious way to raise accuracy is to drop letters that are easy to misread or mistype, keeping one of each confusable pair. We tested that idea against the objective and rejected it: for these players, in this font, the full 26 letters maximize `B`.
 
@@ -92,7 +92,7 @@ The arithmetic is unforgiving. Near `N = 26`, removing one letter costs only abo
 
 At those accuracies the `N`-bits dominate. Modeling `B` across alphabet sizes, even crediting a trimmed set a generous extra point or two of accuracy, every smaller alphabet scores lower than the full one (roughly −5% at `N = 20`, −14% at `N = 16`). The one letter with any case for removal is `i`, the textbook code-font ambiguity with `l` that also sits between `u`, `o`, and `k` on QWERTY. But even that cut fails its own test: `i` comes up one time in 26, so to recover ~0.6 points of accuracy its per-letter error rate would have to top 15%, far above the ~5 to 10% a clear monospace actually produces. The math endorses no cut. Accuracy is already high because the font is clear; the alphabet is not the lever, and all 26 letters maximize `B`.
 
-The same test flips for speech. Spoken bare letters are nowhere near that accurate, since the E-set alone pushes per-letter error into the tens of percent, so the binding constraint there is the doubly-weighted accuracy term, not the `N`-bits. Trimming the alphabet would buy accuracy by spending `N`; a spelling alphabet like NATO buys it by spending rate, on extra syllables, and `B` is linear in rate. Emma's voice mode spends neither: it keeps all 26 and the full speed, and swaps each letter for a distinct one-syllable word. The "Profiles" section below covers it.
+For speech the binding term is accuracy: spoken bare letters are far less accurate, since the E-set alone runs into the tens of percent. The same objective then points to a different fix, one that keeps all 26 letters and changes what gets spoken. The Profiles section covers it.
 
 ## Why wrap it in a fight
 
@@ -105,10 +105,10 @@ Competition raises `B` for the same pair of hands. Performance climbs with arous
 ## How it works
 
 - It takes two players on two separate devices, each with a physical keyboard (one player per device, because a browser can't tell two keyboards on one machine apart). Both open the same page, each presses Ready, and only then does the 60-second round begin. Either player can remove the other with a Kick button, handy when someone is holding a seat without readying up, and a player on their own can play solo against the computer (below).
-- N = 26 letters, drawn i.i.d. uniform with replacement. No language model, no patterns.
+- N = 26 letters, drawn i.i.d. uniform with replacement, with no language model or learnable patterns.
 - Each completed four-letter block is an attack; damage is `log2(25) × max(correct − wrong, 0)`.
 - The server is the authoritative referee for HP, score, and winner. Browsers send keystroke results and draw the fight. A round runs 60 seconds; the first to 0 HP wins, otherwise the higher HP at the buzzer takes it.
-- The end screen reports each player's `B`, `Sc`, and `Si`, so the measurement is visible.
+- The end screen reports each player's `B`, `Sc`, and `Si`, so the measurement is visible; from there a player can rematch or return to the lobby.
 - No dependencies for the core game: the server is pure Python standard library and the client is a single HTML page. Transport is SSE plus POST, and a reconnect reclaims the same player slot by token. The one exception is the optional voice profile, which loads the Vosk speech runtime and a bundled model.
 
 ## Run it
@@ -133,9 +133,9 @@ The same match can be played three ways, picked in the lobby before you ready up
 - **Elizabeth** types the same letters with a large on-screen keyboard under the box. The current key lights up so she knows what to press, and a teal arrow runs from it to the next key so she can see which way to move and read one ahead without hunting. A guided interface for a player who values one.
 - **Emma** speaks instead of typing, for a player whose hand-eye coordination makes the keyboard hard. Her box shows a short word in place of each letter (A is "ant", V is "van"); she just reads it aloud, and an in-page recognizer maps the word back to the letter.
 
-What makes a symbol fast to enter, by hand or by voice, is seeing it and producing it with almost no thought in between. Bare spoken letters keep that immediacy but lose accuracy, because many of them rhyme: the E-set (B, C, D, E, G, P, T, V, Z) all sit on a long "e", so a small recognizer swaps V, E, B, D and the rest (Loizou and Spanias 1996), with the nasals (M, N), the "ay" set (A, J, K), Q/U, and the fricatives (F, S) close behind. A spelling alphabet like NATO fixes the accuracy but spends the rate instead: "Victor" and "Whiskey" run two and three syllables, and since `B = log2(N − 1) · R · (2a − 1)` is linear in rate, the slower channel cannot win it back; in this game's own table the phonetic words land at the bottom on bits per second. The move that spends neither `N` nor rate is to keep all 26 letters and the full speed, but say a distinct one-syllable word for each letter instead of the letter's name. So Emma's box shows a common monosyllable in place of each character, one she just reads aloud with nothing to memorize and no code to recall: A is ant, B is book, C is cat, on to Z is zoo. The words were picked for mutual distinctness, which is what actually governs a grammar-locked recognizer: it can only return a word from the bank, so the words compete only against each other and accuracy is set by the closest pair. Every word differs from every other in onset, vowel, or ending, none rhyme, and none lands on the "ee" that sinks the letters, so those confusions have nowhere to go. `N` stays 26, scored with `log2(25)` exactly like a typist, and one syllable per word keeps the speaking rate near letter speed rather than collapsing the way NATO does. The lobby has a microphone check with a device picker and a live level meter, and Emma can only ready up once it registers her voice.
+The bank is one common monosyllable per letter, A is ant, B is book, on to Z is zoo, built for two things at once. Speed: one syllable keeps her rate near letter speed, where NATO's two and three syllable words would halve it, and `B` is linear in rate. Accuracy: the recognizer is locked to this bank, so the words compete only against each other and accuracy is set by the closest pair in the set (Luce and Pisoni 1998); the 26 were picked so every pair differs in onset, vowel, or ending, with no rhymes and none on the "ee" nucleus that makes the spoken letters collapse. `N` stays 26, scored with `log2(25)` like a typist. The lobby runs a microphone check with a device picker and a live level meter, and Emma can ready up only once it registers her voice.
 
-The recognizer is an in-page offline engine (Vosk), held by a grammar to exactly those 26 words and nothing else, so every utterance is forced onto one of them and a lookup maps it back to its letter. Constraining a recognizer to a small known vocabulary is the right tool here; full transcription models like Whisper are stronger on connected speech but heavier, weaker on isolated tokens, and do not constrain to a fixed pool. It listens to the exact microphone she selects, with the browser's echo cancellation, noise suppression, and auto-gain turned off, since those smear the brief consonant onsets that tell one word from the next. The model ships with the game, loads automatically the first time someone picks Emma, and then runs entirely offline; players set nothing up. If a particular voice or room still trips a pair, the next step is a better recognizer rather than a different scheme: fine-tune on the word set, or adapt to one player's voice with a few recorded samples.
+The recognizer is an in-page offline engine (Vosk), held by a grammar to exactly those 26 words, so every utterance is forced onto one of them and a lookup returns its letter. A small closed vocabulary is what this class of model handles best; full transcription models like Whisper are heavier and weaker on isolated tokens. It reads the exact microphone she selects, with the browser's echo cancellation, noise suppression, and auto-gain off, since those smear the brief consonant onsets that separate one word from the next. The model ships with the game, loads the first time someone picks Emma, and runs entirely offline. If a voice or room still trips a pair, the next step is a stronger recognizer: fine-tune on the word set, or adapt to one speaker with a few recorded samples.
 
 The bundled model is `vosk-model-small-en-us-0.15` (about 40 MB, shipped as `assets/vosk-model-en.tar.gz`), served and cached by the same Python server. The `vosk-browser` runtime loads from a CDN; to run fully self-contained, host its `dist` files in `assets/` and point `VOSK_LIB_URL` in `fight.html` at them.
 
@@ -160,5 +160,6 @@ Each character is a folder of transparent frame images plus a `manifest.json`, w
 - Grudin, J. T. (1983). *Error patterns in novice and skilled transcription typing.* In Cognitive Aspects of Skilled Typewriting.
 - Palin, K., Feit, A. M., Kim, S., Kristensson, P. O., & Oulasvirta, A. (2019). *How do people type on mobile devices? Observations from a study with 37,000 volunteers.* MobileHCI 2019.
 - Loizou, P. C., & Spanias, A. S. (1996). *High-performance alphabet recognition.* IEEE Transactions on Speech and Audio Processing 4(6).
+- Luce, P. A., & Pisoni, D. B. (1998). *Recognizing spoken words: the neighborhood activation model.* Ear and Hearing 19(1).
 
 MIT licensed. See [LICENSE](LICENSE).
