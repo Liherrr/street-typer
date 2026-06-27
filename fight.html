@@ -75,6 +75,7 @@
   .fighter{position:absolute; bottom:8%; font-size:clamp(54px,9vw,84px); filter:drop-shadow(0 9px 8px rgba(0,0,0,.55)); transition:transform .12s}
   .fighter .spr{display:block; height:clamp(120px,24vh,205px); width:auto; image-rendering:auto}
   .fighter.left{left:38%} .fighter.right{right:38%}
+  #ring.flip .spr{transform:scaleX(-1)}   /* P2 viewpoint: the two fighters were filmed facing opposite ways, so mirror the drawing (not the motion) */
   .fighter.hurt{animation:hurt .3s ease}
   @keyframes hurt{0%,100%{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))} 20%{filter:drop-shadow(0 0 14px #ff6b6b) brightness(1.8)} 30%{transform:translateX(-8px)} 60%{transform:translateX(4px)}}
   .fighter.right.hurt{animation:hurtR .3s ease}
@@ -327,7 +328,7 @@
   };
   Sprite.prototype.tick=function(dt){
     if(!this.cur) return;
-    this.acc+=dt; var spf=1/this.cur.fps;
+    this.acc+=dt; var spf=2/this.cur.fps;   // 2x slower than the manifest fps
     while(this.acc>=spf){
       this.acc-=spf;
       if(this.frame<this.cur.urls.length-1){ this.img.src=this.cur.urls[++this.frame]; }
@@ -401,6 +402,7 @@
         // each player embodies their OWN character (P1=char1, P2=char2); right side is the opponent.
         // emoji is only a fallback; never overwrite a live sprite <img> on an SSE reconnect.
         if(!useSprites){ $("f1").textContent=(you===1)?"🥷":"🤖"; $("f2").textContent=(you===1)?"🤖":"🥷"; }
+        $("ring").classList.toggle("flip", you===2);   // mirror the sprite drawings for Player 2's viewpoint
         loadCharacters();
         break;
       case "lobby": present=ev.present||[]; readyMap=ev.ready||readyMap; updateLobby(); break;
