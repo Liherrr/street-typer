@@ -159,16 +159,67 @@ def content_bbox(img):
     return img.split()[3].getbbox()    # bbox of non-transparent alpha
 
 
+def _largest_component(mask):
+    """Boolean mask of the largest connected alpha blob (the body), so a detached bit
+    (e.g. a recovered weapon island) cannot pull the feet anchor or the height measure."""
+    import numpy as np
+    try:
+        from scipy import ndimage
+        lab, n = ndimage.label(mask)
+        if n <= 1:
+            return mask
+        sizes = ndimage.sum(np.ones_like(lab), lab, range(1, n + 1))
+        return lab == (1 + int(np.argmax(sizes)))
+    except Exception:
+        return mask
+
+
+def feet_anchor(fig):
+    """Ground-contact anchor (x, y) of a cropped figure: x = horizontal centroid of the foot
+    band, y = bottom of the body. Thin spikes (a downward weapon tip) and detached islands are
+    ignored, so every frame can be planted by the SAME point and the fighter never drifts."""
+    import numpy as np
+    a = np.asarray(fig.split()[3]); H, W = a.shape
+    body = _largest_component(a > 40)
+    rc = body.sum(1); rows = np.where(rc > 0)[0]
+    if not len(rows):
+        return W / 2.0, float(H - 1)
+    maxw = int(rc.max()); wthr = max(6, int(0.10 * maxw))
+    fr = np.where(rc >= wthr)[0]
+    feet_bot = int(fr[-1]) if len(fr) else int(rows[-1])
+    band = max(4, int(0.06 * (rows[-1] - rows[0] + 1)))
+    sub = body[max(0, feet_bot - band):feet_bot + 1, :]
+    cc = sub.sum(0).astype(float)
+    fx = float((np.arange(W) * cc).sum() / cc.sum()) if cc.sum() else W / 2.0
+    return fx, float(feet_bot)
+
+
+def body_height(fig):
+    """Head-to-feet height of a cropped figure, excluding a thin raised weapon (via a width gate),
+    so the scale can normalise the BODY to one size within and across characters."""
+    import numpy as np
+    a = np.asarray(fig.split()[3])
+    body = _largest_component(a > 40)
+    rc = body.sum(1); rows = np.where(rc > 0)[0]
+    if not len(rows):
+        return 0
+    maxw = int(rc.max())
+    head = np.where(rc >= max(18, int(0.25 * maxw)))[0]
+    foot = np.where(rc >= max(6, int(0.10 * maxw)))[0]
+    return int(foot[-1] - head[0]) if len(head) and len(foot) else int(rows[-1] - rows[0])
+
+
 def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex, face, fps, model="u2net",
-            recover="none", picks_override=None):
+            recover="none", picks_override=None, body_h=0.78):
     from PIL import Image
+    import numpy as np
     picks_override = picks_override or {}
     cw, ch = canvas
     out_dir = os.path.join(ROOT, "characters", char)
     os.makedirs(out_dir, exist_ok=True)
 
-    # ---- gather + matte every frame we want, remember its cropped figure ----
-    plan, idle_heights = [], []
+    # ---- gather + matte every frame; record its cropped figure + ground-contact anchor ----
+    plan, idle_bodies = [], []
     for state, (count, loop) in STATES.items():
         clip = find_clip(raw, state)
         if not clip:
@@ -190,40 +241,38 @@ def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex,
                 if not bb:
                     continue
                 fig = im.crop(bb)
-                plan.append((state, i + 1, fig))
+                fx, fy = feet_anchor(fig)
+                plan.append((state, i + 1, fig, fx, fy))
                 if state == "idle":
-                    idle_heights.append(fig.height)
+                    idle_bodies.append(body_height(fig))
         print("  %-8s -> %d frames" % (state, n))
 
     if not plan:
         die("no usable frames produced — check the clip names and that the figure is visible.")
 
-    # ---- one scale for ALL frames so the fighter is a consistent size; feet on the baseline ----
-    ref_h = sorted(idle_heights)[len(idle_heights) // 2] if idle_heights else \
-        sorted(f.height for _, _, f in plan)[len(plan) // 2]
-    scale = (ch * char_h) / ref_h
+    # ---- ONE scale from the median IDLE body height (head->feet, weapon excluded). Driving the
+    #      scale by body height (not the bbox, which the weapon inflates differently per fighter)
+    #      makes the body a consistent size within AND across characters when both use --body-height.
+    bodies = idle_bodies or [body_height(f) for _, _, f, _, _ in plan]
+    ref_body = sorted(bodies)[len(bodies) // 2]
+    scale = (ch * body_h) / ref_body
     base_y = int(ch * baseline)
+    cx = cw / 2.0
 
-    # Keep the fighter at full size, but don't let an extreme outlier pose (e.g. a victory weapon
-    # raise that towers over the idle height) get clipped at the top: cap the scale so the
-    # 92nd-percentile-tall frame still fits under a small top margin. This leaves the normal
-    # standing/attack frames untouched and only reins in a rare hero pose. Feet stay on baseline.
-    import math
-    top_margin = max(2, int(ch * 0.012))
-    hs = sorted(f.height for _, _, f in plan)
-    p92 = hs[min(len(hs) - 1, int(math.ceil(0.92 * len(hs))) - 1)]
-    fit_scale = (base_y - top_margin) / p92
-    if fit_scale < scale:
-        print("  (scale capped %.3f -> %.3f so tall poses aren't clipped at the top)" % (scale, fit_scale))
-        scale = fit_scale
-
+    # ---- plant every frame by its FEET anchor at the SAME fixed point (centre x, baseline), so the
+    #      fighter never drifts or floats; arms and weapons extend around the locked feet. ----
     counts = {}
-    for state, idx, fig in plan:
+    for state, idx, fig, fx, fy in plan:
         w, h = max(1, round(fig.width * scale)), max(1, round(fig.height * scale))
-        fig = fig.resize((w, h), Image.LANCZOS)
-        canvas_img = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
-        canvas_img.alpha_composite(fig, ((cw - w) // 2, base_y - h))   # centered x, feet at baseline
-        canvas_img.save(os.path.join(out_dir, "%s_%02d.png" % (state, idx)))
+        fig_s = np.asarray(fig.resize((w, h), Image.LANCZOS))
+        offx, offy = round(cx - fx * scale), round(base_y - fy * scale)
+        canvas_arr = np.zeros((ch, cw, 4), np.uint8)
+        dx0, dy0 = max(0, offx), max(0, offy)
+        dx1, dy1 = min(cw, offx + w), min(ch, offy + h)
+        if dx1 > dx0 and dy1 > dy0:                          # clip-safe copy (figure may overflow)
+            sx0, sy0 = dx0 - offx, dy0 - offy
+            canvas_arr[dy0:dy1, dx0:dx1] = fig_s[sy0:sy0 + (dy1 - dy0), sx0:sx0 + (dx1 - dx0)]
+        Image.fromarray(canvas_arr, "RGBA").save(os.path.join(out_dir, "%s_%02d.png" % (state, idx)))
         counts[state] = max(counts.get(state, 0), idx)
 
     # ---- manifest ----
@@ -248,8 +297,13 @@ def main():
     ap.add_argument("raw_dir", help="folder with idle.* attack1.* ... win.* lose.* clips")
     ap.add_argument("--char", required=True, choices=["p1", "p2"], help="which character (Player 1 or 2)")
     ap.add_argument("--frames", type=int, default=0, help="override frames per state (0 = per-state defaults)")
-    ap.add_argument("--canvas", default="420x540", help="output canvas WxH (default 420x540)")
-    ap.add_argument("--char-height", type=float, default=0.82, help="figure height as fraction of canvas")
+    ap.add_argument("--canvas", default="640x540",
+                    help="output canvas WxH (default 640x540; extra width gives a long weapon like "
+                         "P2's broom room to swing around the feet-anchored body without clipping)")
+    ap.add_argument("--char-height", type=float, default=0.82, help="(legacy; superseded by --body-height)")
+    ap.add_argument("--body-height", type=float, default=0.78,
+                    help="BODY height (head->feet, weapon excluded) as a fraction of the canvas. Use the "
+                         "SAME value for both fighters so they come out the same size (default 0.78).")
     ap.add_argument("--baseline", type=float, default=0.96, help="feet position as fraction of canvas height")
     ap.add_argument("--matte", default="rembg", choices=["rembg", "green", "chroma", "none"])
     ap.add_argument("--rembg-model", default="u2net",
@@ -276,7 +330,7 @@ def main():
           (a.char, a.raw_dir, a.matte, a.rembg_model, a.recover, a.face,
            ", picks=" + str(picks_override) if picks_override else ""))
     process(a.raw_dir, a.char, a.frames, (cw, ch), a.char_height, a.baseline, a.matte, a.key, a.face, a.fps,
-            a.rembg_model, a.recover, picks_override)
+            a.rembg_model, a.recover, picks_override, a.body_height)
 
 
 if __name__ == "__main__":

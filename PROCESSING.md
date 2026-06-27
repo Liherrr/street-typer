@@ -55,10 +55,16 @@ python tools/process_clips.py raw_p2 --char p2
 ```
 
 This writes `characters/p1/<state>_NN.png` plus `manifest.json` (and the same for p2). It extracts and
-step-prints frames, removes the background to a transparent PNG, scales every frame to one character
-height, and plants the feet on a fixed baseline so the fighter never jumps.
+step-prints frames, removes the background to a transparent PNG, scales every frame to one BODY height
+(head to feet, weapon excluded, so both fighters end up the same size when you pass the same
+`--body-height`), and plants the detected feet on one fixed point (canvas centre, baseline) in every
+frame so the fighter never drifts or floats. Arms and weapons extend around the locked feet.
 
-Tunables: `--frames N` (frames per move), `--canvas 420x540`, `--char-height 0.82`, `--baseline 0.96`.
+Tunables: `--frames N` (frames per move), `--canvas 640x540` (wide so a long weapon can swing without
+clipping), `--body-height 0.78` (body as a fraction of canvas height; use the SAME for both fighters),
+`--baseline 0.96`. For a fighter whose held weapon is a saturated colour the matte keeps dropping on
+fast/blurred frames, `--recover red` keys it back in; `--picks STATE=i,j,...` hand-picks frame indices
+when even sampling lands on a bad frame.
 
 ---
 
