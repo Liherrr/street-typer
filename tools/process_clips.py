@@ -210,7 +210,7 @@ def body_height(fig):
 
 
 def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex, face, fps, model="u2net",
-            recover="none", picks_override=None, body_h=0.78):
+            recover="none", picks_override=None, body_h=0.78, frame_mult=1):
     from PIL import Image
     import numpy as np
     picks_override = picks_override or {}
@@ -225,7 +225,7 @@ def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex,
         if not clip:
             print("  (skip %-8s no clip found)" % state)
             continue
-        n = frames_override or count
+        n = (frames_override or count) * frame_mult
         with tempfile.TemporaryDirectory() as tmp:
             allframes = extract_frames(clip, tmp)
             if state in picks_override:                     # hand-picked frame indices for this state
@@ -297,6 +297,9 @@ def main():
     ap.add_argument("raw_dir", help="folder with idle.* attack1.* ... win.* lose.* clips")
     ap.add_argument("--char", required=True, choices=["p1", "p2"], help="which character (Player 1 or 2)")
     ap.add_argument("--frames", type=int, default=0, help="override frames per state (0 = per-state defaults)")
+    ap.add_argument("--frame-mult", type=int, default=1,
+                    help="multiply every state's frame count (e.g. 5 = 5x smoother animation; remember to "
+                         "raise --fps by the same factor to keep the same playback duration)")
     ap.add_argument("--canvas", default="640x540",
                     help="output canvas WxH (default 640x540; extra width gives a long weapon like "
                          "P2's broom room to swing around the feet-anchored body without clipping)")
@@ -330,7 +333,7 @@ def main():
           (a.char, a.raw_dir, a.matte, a.rembg_model, a.recover, a.face,
            ", picks=" + str(picks_override) if picks_override else ""))
     process(a.raw_dir, a.char, a.frames, (cw, ch), a.char_height, a.baseline, a.matte, a.key, a.face, a.fps,
-            a.rembg_model, a.recover, picks_override, a.body_height)
+            a.rembg_model, a.recover, picks_override, a.body_height, a.frame_mult)
 
 
 if __name__ == "__main__":

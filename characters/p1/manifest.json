@@ -1,37 +1,37 @@
 {
   "name": "P1",
-  "fps": 10,
+  "fps": 50,
   "ext": "png",
   "states": {
     "intro": {
-      "count": 5,
+      "count": 25,
       "hold": 400
     },
     "idle": {
-      "count": 6,
+      "count": 30,
       "loop": true
     },
     "attack1": {
-      "count": 5
+      "count": 25
     },
     "attack2": {
-      "count": 5
+      "count": 25
     },
     "attack3": {
-      "count": 5
+      "count": 25
     },
     "attack4": {
-      "count": 5
+      "count": 25
     },
     "hurt": {
-      "count": 3
+      "count": 15
     },
     "win": {
-      "count": 4,
+      "count": 20,
       "loop": true
     },
     "lose": {
-      "count": 4
+      "count": 20
     }
   }
 }
