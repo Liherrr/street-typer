@@ -168,8 +168,10 @@
   <!-- CONNECTING / LOBBY -->
   <section id="lobby" class="screen on">
     <h1 class="gametitle">STREET TYPER</h1>
-    <p class="lede">A live typing duel. Type the highlighted letters; every clean <b>4-letter block</b> throws an
-      attack. Damage = bits. The match starts only when both players are on this page and ready.</p>
+    <p class="lede">A live typing duel. Type the highlighted letters. Finishing a <b>4-letter block</b> always
+      throws an attack, and it hits for the bits you earned in that block: correct letters add, mistakes
+      subtract, and once the mistakes catch up to the hits the attack does no damage at all.
+      The match starts only when both players are on this page and ready.</p>
     <div class="lobcard">
       <div class="seats">
         <div class="seat" id="seat1"><div class="who">Player 1 (host)</div><div class="st" id="st1">—</div></div>
@@ -210,7 +212,7 @@
         <div class="hcell"><div class="k">Si</div><div class="v" id="hSi">0</div></div>
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
       </div>
-      <div class="hint">type the highlighted letters; every 4 correct letters lands a hit</div>
+      <div class="hint">type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes</div>
     </div>
   </section>
 </div>

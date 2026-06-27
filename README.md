@@ -8,7 +8,7 @@
 &nbsp;![Players: 2](https://img.shields.io/badge/players-2-orange.svg)
 &nbsp;![Objective: max bits/sec](https://img.shields.io/badge/objective-max%20bits%E2%81%84sec-8a2be2.svg)
 
-You type a stream of random letters. Every clean four-letter block lands an attack, and its damage equals the bits you just transmitted. Your opponent's health bar is sized so that only a sustained 20 bits per second can drain it inside a 60-second round, so the player with the higher information rate wins.
+You type a stream of random letters. Every four-letter block you finish lands an attack, and its damage is the bits you transmitted in that block: your correct letters minus your mistakes, never below zero. A clean block deals the full four letters of damage, and a block with as many mistakes as correct letters deals none. Your opponent's health bar is sized so that only a sustained 20 bits per second can drain it inside a 60-second round, so the player with the higher information rate wins.
 
 Underneath the fighting game is a bit-rate meter. The rest of this document is about that meter: the quantity it measures, why typing random letters maximizes that quantity for the people who will play it, the other input methods we built and dropped, and the design choices behind the measurement.
 
@@ -93,7 +93,7 @@ At those accuracies the `N`-bits dominate. Modeling `B` across alphabet sizes, e
 
 The fighting game controls the two factors a player can squander, rate and accuracy, and it turns the metric into the mechanic.
 
-Damage is bits. A clean four-letter block deals `log2 25 × (correct − wrong)` damage, and HP is `1200 = 20 b/s × 60 s`, so only a round near 20 bits per second can empty a bar. The objective and the win condition are the same function, so there is no way to win except by maximizing `B`.
+Damage is bits. Every completed four-letter block deals `log2 25 × max(correct − wrong, 0)` damage. A clean block lands all four letters, and the floor at zero means a block with as many wrong letters as correct ones lands nothing. HP is `1200 = 20 b/s × 60 s`, so only a round near 20 bits per second can empty a bar. The objective and the win condition are the same function, so there is no way to win except by maximizing `B`.
 
 Competition raises `B` for the same pair of hands. Performance climbs with arousal up to a point (Yerkes-Dodson 1908), and a live opponent with a draining health bar supplies a measured stake that pushes attention toward its peak and holds it there. A clear goal, instant feedback, and a challenge matched to skill are also the conditions for flow (Csikszentmihalyi 1990). Sustained attention is what lifts `R` and suppresses the slips that cost the `(2a − 1)` term. The same hands produce a higher `B` under pressure than in a solo trial, so the competition directly serves the objective.
 
@@ -101,7 +101,7 @@ Competition raises `B` for the same pair of hands. Performance climbs with arous
 
 - It takes two players on two separate devices, each with a physical keyboard (one player per device, because a browser can't tell two keyboards on one machine apart). Both open the same page, each presses Ready, and only then does the 60-second round begin. A single player waits in the lobby.
 - N = 26 letters, drawn i.i.d. uniform with replacement. No language model, no patterns.
-- Each completed four-letter block is an attack; damage is `log2(25) × (correct − wrong)`.
+- Each completed four-letter block is an attack; damage is `log2(25) × max(correct − wrong, 0)`.
 - The server is the authoritative referee for HP, score, and winner. Browsers send keystroke results and draw the fight. A round runs 60 seconds; the first to 0 HP wins, otherwise the higher HP at the buzzer takes it.
 - The end screen reports each player's `B`, `Sc`, and `Si`, so the measurement is visible.
 - No dependencies. The server is pure Python standard library and the client is a single HTML page. Transport is SSE plus POST, and a reconnect reclaims the same player slot by token.

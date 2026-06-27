@@ -13,7 +13,7 @@ How two testers connect with zero fuss:
     other player opens that URL.
 
 Referee rules (server is authoritative):
-  - N = 26 letters, i.i.d. uniform.  Each correctly-typed 4-letter block is an attack.
+  - N = 26 letters, i.i.d. uniform.  Each completed 4-letter block fires an attack (correct or not).
   - damage = log2(N-1) * (correct - wrong) accumulated; an opponent's HP = HP_MAX - your best
     cumulative bit-score.  HP_MAX = 20 bps * 60 s = 1200 bit-damage, so ONLY a ~20 bps run can KO.
   - First to drop the opponent to 0 wins; at 60 s the higher remaining HP wins.
