@@ -102,12 +102,12 @@ Competition raises `B` for the same pair of hands. Performance climbs with arous
 
 ## How it works
 
-- It takes two players on two separate devices, each with a physical keyboard (one player per device, because a browser can't tell two keyboards on one machine apart). Both open the same page, each presses Ready, and only then does the 60-second round begin. A single player waits in the lobby.
+- It takes two players on two separate devices, each with a physical keyboard (one player per device, because a browser can't tell two keyboards on one machine apart). Both open the same page, each presses Ready, and only then does the 60-second round begin. Either player can remove the other with a Kick button, handy when someone is holding a seat without readying up, and a player on their own can play solo against the computer (below).
 - N = 26 letters, drawn i.i.d. uniform with replacement. No language model, no patterns.
 - Each completed four-letter block is an attack; damage is `log2(25) × max(correct − wrong, 0)`.
 - The server is the authoritative referee for HP, score, and winner. Browsers send keystroke results and draw the fight. A round runs 60 seconds; the first to 0 HP wins, otherwise the higher HP at the buzzer takes it.
 - The end screen reports each player's `B`, `Sc`, and `Si`, so the measurement is visible.
-- No dependencies. The server is pure Python standard library and the client is a single HTML page. Transport is SSE plus POST, and a reconnect reclaims the same player slot by token.
+- No dependencies for the core game: the server is pure Python standard library and the client is a single HTML page. Transport is SSE plus POST, and a reconnect reclaims the same player slot by token. The one exception is the optional voice profile, which loads the Vosk speech runtime and a bundled model.
 
 ## Run it
 
