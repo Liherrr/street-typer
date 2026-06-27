@@ -331,7 +331,7 @@ class Handler(BaseHTTPRequestHandler):
                                "port": port})
         if path == "/sync":
             return self._serve_sync()
-        if path.startswith("/characters/"):
+        if path.startswith("/characters/") or path.startswith("/assets/"):
             return self._serve_static(path)
         self.send_error(404)
 

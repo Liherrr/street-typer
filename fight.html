@@ -337,16 +337,21 @@
   Sprite.prototype.idle=function(){ this.play("idle"); };
   Sprite.prototype.win =function(){ this.play(this.man.states.win ?"win" :"idle"); };
   Sprite.prototype.lose=function(){ this.play(this.man.states.lose?"lose":"idle"); };
+  var tickOn=false;
   function spriteTick(ts){
-    if(!useSprites) return;
+    if(!useSprites){ tickOn=false; return; }
     var dt=lastSpr?(ts-lastSpr)/1000:0; lastSpr=ts; if(dt>0.1)dt=0.1;
-    if(sprites.f1) sprites.f1.tick(dt); if(sprites.f2) sprites.f2.tick(dt);
+    try{ if(sprites.f1) sprites.f1.tick(dt); if(sprites.f2) sprites.f2.tick(dt); }catch(e){}
     requestAnimationFrame(spriteTick);
   }
+  function startTick(){ if(tickOn) return; tickOn=true; lastSpr=0; requestAnimationFrame(spriteTick); }
   function preload(urls){ return Promise.all(urls.map(function(u){ return new Promise(function(res,rej){ var im=new Image(); im.onload=res; im.onerror=rej; im.src=u; }); })); }
   function preloadAll(dir,man){ for(var st in man.states){ var s=man.states[st],ext=man.ext||"png"; for(var i=1;i<=s.count;i++){ (new Image()).src=dir+"/"+st+"_"+pad2(i)+"."+ext; } } }
+  var charsInit=false;
   function loadCharacters(){
     if(you!==1 && you!==2) return;
+    if(charsInit) return;                          // load once; SSE reconnects must not re-init or wipe the sprites
+    charsInit=true;
     var lDir="characters/p"+you, rDir="characters/p"+(you===1?2:1);
     Promise.all([ fetch(lDir+"/manifest.json").then(function(r){return r.json();}),
                   fetch(rDir+"/manifest.json").then(function(r){return r.json();}) ])
@@ -355,10 +360,10 @@
         return preload([lDir+"/idle_01."+(lm.ext||"png"), rDir+"/idle_01."+(rm.ext||"png")]).then(function(){
           sprites.f1=new Sprite($("f1"), lDir, lm);
           sprites.f2=new Sprite($("f2"), rDir, rm);
-          useSprites=true; lastSpr=0; requestAnimationFrame(spriteTick);
+          useSprites=true; startTick();
           preloadAll(lDir,lm); preloadAll(rDir,rm);
         });
-      }).catch(function(){ useSprites=false; });   // no/partial assets -> keep the emoji fighters
+      }).catch(function(){ useSprites=false; charsInit=false; });   // failed -> retry on the next welcome
   }
 
   function post(ev){ev.pid=you;try{fetch("/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(ev)});}catch(e){}}
@@ -380,8 +385,8 @@
         $("younm").textContent = you===1?"PLAYER 1 (you)":"PLAYER 2 (you)";
         $("oppnm").textContent = you===1?"PLAYER 2":"PLAYER 1";
         // each player embodies their OWN character (P1=char1, P2=char2); right side is the opponent.
-        $("f1").textContent = (you===1)?"🥷":"🤖";   // left = you
-        $("f2").textContent = (you===1)?"🤖":"🥷";   // right = opponent (emoji fallback only)
+        // emoji is only a fallback; never overwrite a live sprite <img> on an SSE reconnect.
+        if(!useSprites){ $("f1").textContent=(you===1)?"🥷":"🤖"; $("f2").textContent=(you===1)?"🤖":"🥷"; }
         loadCharacters();
         break;
       case "lobby": present=ev.present||[]; readyMap=ev.ready||readyMap; updateLobby(); break;
