@@ -447,12 +447,14 @@
     $("f1").className="fighter left"; $("f2").className="fighter right";
     $("koText").className="kotext";                              // clear any leftover result text
     pendingIntro=true; playIntro();                             // entrance now, or as soon as the sprites finish loading
-    cdOverlay.classList.add("on"); var steps=["3","2","1"]; aud();
-    var ca=$("cdAudio"); if(ca){ try{ ca.pause(); ca.currentTime=0; ca.play().catch(function(){}); }catch(e){} }   // countdown voice; align audio so 3@0s, 2@1s, 1@2s, TYPE!@3s
+    cdOverlay.classList.add("on"); aud();
+    var ca=$("cdAudio"); if(ca){ try{ ca.pause(); ca.currentTime=0; ca.play().catch(function(){}); }catch(e){} }   // countdown voice, re-timed so each word lands on the 1s grid below
     function cdBeat(txt,fight){ cdNum.textContent=txt; cdNum.classList.toggle("fight",!!fight);
       cdNum.classList.remove("pop"); void cdNum.offsetWidth; cdNum.classList.add("pop"); }
-    steps.forEach(function(s,k){setTimeout(function(){cdBeat(s,false);},k*1000);});
-    setTimeout(function(){ cdBeat("TYPE!",true); if(useSprites){ sprites.f1.idle(); sprites.f2.idle(); } },steps.length*1000);   // TYPE! shows the idle
+    cdBeat("3",false);                                                      // 3 @0s
+    setTimeout(function(){ cdBeat("2",false); }, 1000);                     // 2 @1s
+    setTimeout(function(){ cdBeat("1",false); }, 2000);                     // 1 @2s
+    setTimeout(function(){ cdBeat("TYPE!",true); if(useSprites){ sprites.f1.idle(); sprites.f2.idle(); } }, 3000);   // TYPE! @3s shows the idle; round starts at 4s
   }
   function beginFight(ev){
     cdOverlay.classList.remove("on"); cdNum.className="count";   // FIGHT! disappears exactly when the round begins (typing unlocks here)
