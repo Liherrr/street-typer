@@ -60,11 +60,23 @@ def find_clip(raw, state):
     return hits[0] if hits else None
 
 
+def ffmpeg_exe():
+    """Resolve an ffmpeg binary: prefer one on PATH, else fall back to the
+    pip-installed imageio-ffmpeg bundle so the pipeline runs without a system ffmpeg."""
+    exe = shutil.which("ffmpeg")
+    if exe:
+        return exe
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        die("ffmpeg not found on PATH. Install it (https://ffmpeg.org/download.html) "
+            "or run `pip install imageio-ffmpeg`, then re-run.")
+
+
 def extract_frames(clip, tmp):
-    if not shutil.which("ffmpeg"):
-        die("ffmpeg not found on PATH. Install it (https://ffmpeg.org/download.html) and re-run.")
     out = os.path.join(tmp, "f_%05d.png")
-    subprocess.run(["ffmpeg", "-y", "-i", clip, "-vsync", "0", out, "-hide_banner", "-loglevel", "error"],
+    subprocess.run([ffmpeg_exe(), "-y", "-i", clip, "-vsync", "0", out, "-hide_banner", "-loglevel", "error"],
                    check=True)
     return sorted(glob.glob(os.path.join(tmp, "f_*.png")))
 
@@ -75,7 +87,20 @@ def pick_even(items, n):
     return [items[round(i * (len(items) - 1) / (n - 1))] for i in range(n)]
 
 
-def matte(img, mode, key_hex):
+_SESSION = None
+
+
+def _rembg_session(model):
+    """Create (once) and reuse a rembg session for the chosen model, so the
+    ~170 MB net loads a single time and every frame is matted with the same model."""
+    global _SESSION
+    if _SESSION is None:
+        from rembg import new_session
+        _SESSION = new_session(model)
+    return _SESSION
+
+
+def matte(img, mode, key_hex, model="u2net"):
     """Return an RGBA image with the background removed."""
     from PIL import Image
     import numpy as np
@@ -96,15 +121,16 @@ def matte(img, mode, key_hex):
         out[mask, 1] = (out[mask, 0] + out[mask, 2]) // 2   # despill leftover green edges
         return Image.fromarray(out.astype("uint8"), "RGBA")
     # default: AI matte
-    rembg = need("rembg")
-    return rembg.remove(img)
+    need("rembg")
+    from rembg import remove
+    return remove(img, session=_rembg_session(model))
 
 
 def content_bbox(img):
     return img.split()[3].getbbox()    # bbox of non-transparent alpha
 
 
-def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex, face, fps):
+def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex, face, fps, model="u2net"):
     from PIL import Image
     cw, ch = canvas
     out_dir = os.path.join(ROOT, "characters", char)
@@ -121,7 +147,7 @@ def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex,
         with tempfile.TemporaryDirectory() as tmp:
             picks = pick_even(extract_frames(clip, tmp), n)
             for i, fp in enumerate(picks):
-                im = matte(Image.open(fp), mode, key_hex)
+                im = matte(Image.open(fp), mode, key_hex, model)
                 if face == "left":
                     im = im.transpose(Image.FLIP_LEFT_RIGHT)
                 bb = content_bbox(im)
@@ -177,6 +203,8 @@ def main():
     ap.add_argument("--char-height", type=float, default=0.82, help="figure height as fraction of canvas")
     ap.add_argument("--baseline", type=float, default=0.96, help="feet position as fraction of canvas height")
     ap.add_argument("--matte", default="rembg", choices=["rembg", "green", "chroma", "none"])
+    ap.add_argument("--rembg-model", default="u2net",
+                    help="rembg model for --matte rembg (e.g. u2net, isnet-general-use, u2net_human_seg)")
     ap.add_argument("--key", default="", help="chroma key color hex (e.g. 00ff00) for --matte green")
     ap.add_argument("--face", default="right", choices=["right", "left"], help="direction filmed (mirrored to face right)")
     ap.add_argument("--fps", type=int, default=10)
@@ -184,8 +212,9 @@ def main():
     if not os.path.isdir(a.raw_dir):
         die("raw_dir not found: " + a.raw_dir)
     cw, ch = (int(x) for x in a.canvas.lower().split("x"))
-    print("processing %s from %s (matte=%s, face=%s)" % (a.char, a.raw_dir, a.matte, a.face))
-    process(a.raw_dir, a.char, a.frames, (cw, ch), a.char_height, a.baseline, a.matte, a.key, a.face, a.fps)
+    print("processing %s from %s (matte=%s, model=%s, face=%s)" % (a.char, a.raw_dir, a.matte, a.rembg_model, a.face))
+    process(a.raw_dir, a.char, a.frames, (cw, ch), a.char_height, a.baseline, a.matte, a.key, a.face, a.fps,
+            a.rembg_model)
 
 
 if __name__ == "__main__":

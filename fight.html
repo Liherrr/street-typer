@@ -66,20 +66,20 @@
     text-shadow:2px 2px 0 #7c2d12, 0 0 16px rgba(255,138,30,.5)}
   .clock small{display:block;font-size:10px;color:var(--dim);letter-spacing:.14em;font-weight:600}
 
-  .ring{position:relative; height:clamp(150px,24vh,210px); border:2px solid #3d2e7a; border-radius:14px; overflow:hidden;
-    background:linear-gradient(180deg,#5a3aa0 0%,#34226e 48%,#1d1146 100%); margin-bottom:10px;
-    box-shadow:inset 0 0 60px rgba(0,0,0,.45)}
+  .ring{position:relative; height:clamp(200px,34vh,300px); border:2px solid #3d2e7a; border-radius:14px; overflow:hidden;
+    background:#cfc9a6 url("assets/background.gif") center bottom / cover no-repeat; image-rendering:pixelated;
+    margin-bottom:10px; box-shadow:inset 0 0 46px rgba(0,0,0,.4)}
   .ground{position:absolute; left:0; right:0; bottom:0; height:34%;
     background:linear-gradient(180deg,rgba(255,170,60,.18),rgba(120,60,20,.05) 60%,rgba(0,0,0,0));
     border-top:1px solid rgba(255,200,120,.18)}
-  .fighter{position:absolute; bottom:14%; font-size:clamp(54px,9vw,84px); filter:drop-shadow(0 6px 10px rgba(0,0,0,.5)); transition:transform .12s}
-  .fighter .spr{display:block; height:clamp(120px,26vh,210px); width:auto; image-rendering:auto}
-  .fighter.left{left:9%} .fighter.right{right:9%; transform:scaleX(-1)}
+  .fighter{position:absolute; bottom:8%; font-size:clamp(54px,9vw,84px); filter:drop-shadow(0 9px 8px rgba(0,0,0,.55)); transition:transform .12s}
+  .fighter .spr{display:block; height:clamp(120px,24vh,205px); width:auto; image-rendering:auto}
+  .fighter.left{left:38%} .fighter.right{right:38%; transform:scaleX(-1)}
   .fighter.hurt{animation:hurt .3s ease}
   @keyframes hurt{0%,100%{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))} 20%{filter:drop-shadow(0 0 14px #ff6b6b) brightness(1.8)} 30%{transform:translateX(8px)} 60%{transform:translateX(-4px)}}
   .fighter.right.hurt{animation:hurtR .3s ease}
   @keyframes hurtR{0%,100%{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5)) ;transform:scaleX(-1)} 20%{filter:drop-shadow(0 0 14px #ff6b6b) brightness(1.8); transform:scaleX(-1)} 30%{transform:scaleX(-1) translateX(8px)} 60%{transform:scaleX(-1) translateX(-4px)}}
-  .fighter.atk.left{transform:translateX(26px) scale(1.05)} .fighter.atk.right{transform:scaleX(-1) translateX(26px) scale(1.05)}
+  .fighter.atk.left{transform:translateX(42px) scale(1.06)} .fighter.atk.right{transform:scaleX(-1) translateX(42px) scale(1.06)}
   .fighter.ko{transform:rotate(82deg) translateY(18px); filter:grayscale(.7) drop-shadow(0 0 8px #000); opacity:.85}
   .fighter.ko.right{transform:scaleX(-1) rotate(82deg) translateY(18px)}
   .shake{animation:shake .22s ease}
@@ -108,18 +108,16 @@
 
   /* FX */
   .fx{position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:40}
-  .proj{position:absolute; width:34px; height:34px; margin:-17px 0 0 -17px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px;
-    will-change:transform; box-shadow:0 0 20px 6px currentColor}
   .part{position:absolute; border-radius:50%; margin:-4px 0 0 -4px; opacity:1; animation:part .5s ease-out forwards}
   @keyframes part{to{transform:translate(var(--tx,0),var(--ty,0)) scale(.1); opacity:0}}
   .hitflash{position:absolute; width:96px; height:96px; margin:-48px 0 0 -48px; border-radius:50%; opacity:0; animation:hitflash .26s ease-out forwards}
   @keyframes hitflash{0%{transform:scale(.2);opacity:1}100%{transform:scale(1.9);opacity:0}}
-  /* Fruit-Ninja style blade slash + cut halves (ported from the original typing game) */
-  .blade{position:absolute; height:5px; width:230px; margin:-2.5px 0 0 -115px; border-radius:5px; transform-origin:center; opacity:0; pointer-events:none;
-    background:linear-gradient(90deg, transparent 0%, currentColor 40%, #fff 80%, #fff 100%); box-shadow:0 0 18px 3px currentColor; animation:blade .24s ease-out forwards}
-  @keyframes blade{0%{opacity:0; transform:rotate(var(--a)) translateX(-110px) scaleX(.45)} 16%{opacity:1} 100%{opacity:0; transform:rotate(var(--a)) translateX(110px) scaleX(1.05)}}
-  .slash-half{position:absolute; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-weight:800; line-height:1; transform-origin:center; will-change:transform,opacity; pointer-events:none}
-  .slash-half .g{display:block; transform-origin:center}
+  /* punch impact: a star burst on the struck fighter */
+  .impactstar{position:absolute; width:120px; height:120px; margin:-60px 0 0 -60px; opacity:0; will-change:transform,opacity;
+    background:radial-gradient(circle,#fff 0%, currentColor 42%, transparent 72%);
+    clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+    animation:impactstar .3s ease-out forwards}
+  @keyframes impactstar{0%{opacity:1;transform:scale(.35) rotate(-12deg)}100%{opacity:0;transform:scale(1.5) rotate(16deg)}}
   .dmg{position:absolute; transform:translate(-50%,-50%); font-family:var(--mono); font-weight:800; font-size:26px; white-space:nowrap; animation:dmg .7s ease-out forwards; text-shadow:0 2px 10px rgba(0,0,0,.6)}
   @keyframes dmg{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}18%{opacity:1;transform:translate(-50%,-70%) scale(1.15)}100%{opacity:0;transform:translate(-50%,-160%) scale(1)}}
   .banner{position:fixed; left:50%; top:32%; transform:translate(-50%,-50%); font-family:var(--mono); font-weight:800; font-size:clamp(30px,7vw,64px);
@@ -177,7 +175,6 @@
       </div>
     </div>
     <div class="ring" id="ring">
-      <div class="ground"></div>
       <div class="fighter left" id="f1">🥷</div>
       <div class="fighter right" id="f2">🤖</div>
     </div>
@@ -190,7 +187,7 @@
         <div class="hcell"><div class="k">Si</div><div class="v" id="hSi">0</div></div>
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
       </div>
-      <div class="hint">type the highlighted letters — every 4 correct letters launches an attack</div>
+      <div class="hint">type the highlighted letters; every 4 correct letters lands a hit</div>
     </div>
   </section>
 </div>
@@ -237,8 +234,19 @@
     g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+.004);g.gain.exponentialRampToValueAtTime(.0001,t+d);
     o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+d+.02);}
   function thock(c){if(!actx)return;var t=actx.currentTime,f=520+Math.min(c,60)*13;blip(t,f,"triangle",.14,.09);if(c>=10)blip(t,f*1.5,"sine",.05,.08);}
-  function hitSnd(kind){if(!actx)return;var t=actx.currentTime;var f=[180,520,360,300,150][kind]||220;
-    blip(t,f,"square",.16,.12);blip(t+.02,f*1.6,"sine",.08,.10);}
+  function punchSnd(kind){if(!actx)return;var t=actx.currentTime;
+    // low body thump with a fast downward pitch sweep
+    var o=actx.createOscillator(),g=actx.createGain(),f0=[150,120,135,168,110][kind%5]||130;
+    o.type="sine";o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f0*.45,t+.12);
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.55,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+.16);
+    o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+.18);
+    // short noise "smack"
+    var dur=.085,sr=actx.sampleRate,buf=actx.createBuffer(1,Math.max(1,(sr*dur)|0),sr),dd=buf.getChannelData(0);
+    for(var i=0;i<dd.length;i++){dd[i]=(Math.random()*2-1)*Math.pow(1-i/dd.length,2);}
+    var src=actx.createBufferSource();src.buffer=buf;
+    var bp=actx.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1100+(kind%5)*240;bp.Q.value=.8;
+    var ng=actx.createGain();ng.gain.setValueAtTime(.5,t);ng.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    src.connect(bp);bp.connect(ng);ng.connect(actx.destination);src.start(t);src.stop(t+dur);}
   function buzz(){if(!actx)return;var t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type="sawtooth";
     o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(70,t+.13);
     g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+.18);
@@ -260,60 +268,22 @@
   // ---------- FX ----------
   var KIND=[{c:"#ff8a1e",g:"🔥"},{c:"#ffd23f",g:"⚡"},{c:"#ff3b8c",g:"🗡️"},{c:"#e8351f",g:"💥"},{c:"#ffe23f",g:"⭐"}];
   function fcenter(el){var r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};}
-  // debris physics so cut halves tumble & fall (ported from the original typing game)
-  var debris=[], debrisRAF=null, debrisLast=0, GRAV=1100;
-  function stepDebris(now){
-    var dt=debrisLast?(now-debrisLast)/1000:0; debrisLast=now; if(dt>0.05)dt=0.05;
-    for(var i=debris.length-1;i>=0;i--){ var p=debris[i]; p.t+=dt;
-      p.vy+=GRAV*dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.rot+=p.vrot*dt;
-      var left=p.life-p.t, op=left<0.22?Math.max(0,left/0.22):1; p.el.style.opacity=op;
-      p.el.style.transform="translate("+p.x.toFixed(1)+"px,"+p.y.toFixed(1)+"px) rotate("+(p.baseAng+p.rot).toFixed(1)+"deg)";
-      if(p.t>=p.life){ rm(p.el); debris.splice(i,1); } }
-    debrisRAF=debris.length?requestAnimationFrame(stepDebris):(debrisLast=0,null);
-  }
-  function spawnDebris(p){ debris.push(p); if(!debrisRAF){ debrisLast=0; debrisRAF=requestAnimationFrame(stepDebris); } }
-  function cutHalves(x,y,text,color,size,ang){
-    var rad=ang*Math.PI/180, px=-Math.sin(rad), py=Math.cos(rad);   // perpendicular to the cut
-    [-1,1].forEach(function(side){
-      var el=document.createElement("div"); el.className="slash-half";
-      el.style.left=x+"px"; el.style.top=y+"px"; el.style.fontSize=size+"px"; el.style.color=color;
-      el.style.width=(size*2.2)+"px"; el.style.height=(size*1.4)+"px";
-      el.style.marginLeft=(-size*1.1)+"px"; el.style.marginTop=(-size*0.7)+"px";
-      var clip=side<0?"inset(0 0 50% 0)":"inset(50% 0 0 0)"; el.style.clipPath=clip; el.style.webkitClipPath=clip;
-      var g=document.createElement("span"); g.className="g"; g.textContent=text; g.style.transform="rotate(calc(-1 * "+ang+"deg))";
-      el.style.transform="rotate("+ang+"deg)"; el.appendChild(g); fx.appendChild(el);
-      var sep=70+Math.random()*60, pop=150+Math.random()*90;
-      spawnDebris({el:el,x:0,y:0, vx:px*sep*side+(Math.random()-0.5)*40, vy:py*sep*side-pop+(Math.random()-0.5)*40,
-        rot:0, vrot:(Math.random()*2-1)*420, baseAng:ang, t:0, life:0.55+Math.random()*0.2});
-    });
-  }
-  function projectile(fromEl,toEl,kind,dmg){
-    var a=fcenter(fromEl),b=fcenter(toEl),k=KIND[kind]||KIND[0];
-    var p=document.createElement("div");p.className="proj";p.style.color=k.c;p.style.background=k.c+"33";p.textContent=k.g;
-    p.style.left=a.x+"px";p.style.top=a.y+"px";fx.appendChild(p);
-    var t0=null,dur=220;
-    function step(ts){if(!t0)t0=ts;var u=Math.min(1,(ts-t0)/dur);var ease=u*u*(3-2*u);
-      p.style.transform="translate("+((b.x-a.x)*ease)+"px,"+((b.y-a.y)*ease-Math.sin(ease*Math.PI)*40)+"px) scale("+(1+ease*.4)+")";
-      if(u<1)requestAnimationFrame(step);else{rm(p);impact(b.x,b.y,kind,dmg);}}
-    requestAnimationFrame(step);
-  }
+  function dmgNum(x,y,text,color){var el=document.createElement("div");el.className="dmg";el.textContent=text;
+    el.style.left=x+"px";el.style.top=y+"px";el.style.color=color;fx.appendChild(el);setTimeout(function(){rm(el);},700);}
+  // a punch landing on the struck fighter: white flash, impact star, sparks, floating damage
   function impact(x,y,kind,dmg){
-    var k=KIND[kind]||KIND[0], slashAng=Math.random()*180;
-    // blade ribbon sweeping across the cut
-    var bl=document.createElement("div");bl.className="blade";bl.style.left=x+"px";bl.style.top=y+"px";
-    bl.style.color=k.c;bl.style.setProperty("--a",slashAng+"deg");fx.appendChild(bl);setTimeout(function(){rm(bl);},250);
-    // crisp flash at the point of contact
+    var k=KIND[kind]||KIND[0];
     var hf=document.createElement("div");hf.className="hitflash";hf.style.left=x+"px";hf.style.top=y+"px";
     hf.style.background="radial-gradient(circle,#fff,"+k.c+" 55%,"+k.c+"00 75%)";fx.appendChild(hf);setTimeout(function(){rm(hf);},260);
-    // impact sparks
-    var n=18;for(var i=0;i<n;i++){var ang=(i/n)*6.2832+Math.random()*.5,dist=44+Math.random()*68;
+    var st=document.createElement("div");st.className="impactstar";st.style.left=x+"px";st.style.top=y+"px";st.style.color=k.c;
+    fx.appendChild(st);setTimeout(function(){rm(st);},300);
+    var n=14;for(var i=0;i<n;i++){var ang=(i/n)*6.2832+Math.random()*.5,dist=40+Math.random()*58;
       var sp=document.createElement("div");sp.className="part";sp.style.left=x+"px";sp.style.top=y+"px";
       sp.style.background=Math.random()<.5?"#fff":k.c;sp.style.boxShadow="0 0 7px "+k.c;
       sp.style.setProperty("--tx",(Math.cos(ang)*dist).toFixed(1)+"px");sp.style.setProperty("--ty",(Math.sin(ang)*dist).toFixed(1)+"px");
-      var sz=(3+Math.random()*7).toFixed(1);sp.style.width=sz+"px";sp.style.height=sz+"px";
+      var sz=(3+Math.random()*6).toFixed(1);sp.style.width=sz+"px";sp.style.height=sz+"px";
       fx.appendChild(sp);(function(e){setTimeout(function(){rm(e);},520);})(sp);}
-    // the damage number gets cleaved in two and tumbles to the floor (the signature "slash")
-    if(dmg>0) cutHalves(x,y-8,"-"+dmg,k.c,30,slashAng);
+    if(dmg>0) dmgNum(x,y-10,"-"+dmg,k.c);
   }
   function banner(txt,col){var el=document.createElement("div");el.className="banner";el.textContent=txt;el.style.color=col||"#ffd23f";
     document.body.appendChild(el);setTimeout(function(){rm(el);},800);}
@@ -480,15 +450,17 @@
     hp=ev.hp||hp; setHP();
     var atkKey=(ev.by===you)?"f1":"f2", tgtKey=(ev.on===you)?"f1":"f2";   // you are the left fighter
     var attackerEl=$(atkKey), targetEl=$(tgtKey);
-    attackerEl.classList.add("atk"); setTimeout(function(){attackerEl.classList.remove("atk");},140);
+    attackerEl.classList.add("atk"); setTimeout(function(){attackerEl.classList.remove("atk");},200);
     if(useSprites && sprites[atkKey]) sprites[atkKey].attack(ev.kind);
-    hitSnd(ev.kind);
-    projectile(attackerEl, targetEl, ev.kind, ev.dmg);
-    setTimeout(function(){
+    setTimeout(function(){                                   // the punch connects on the opponent
+      var c=fcenter(targetEl);
+      impact(c.x, c.y-6, ev.kind, ev.dmg);
+      punchSnd(ev.kind);
       if(useSprites && sprites[tgtKey]) sprites[tgtKey].hurt();
-      else { targetEl.classList.remove("hurt"); void targetEl.offsetWidth; targetEl.classList.add("hurt"); }
-      if(ev.on===you){ ring.classList.remove("shake"); void ring.offsetWidth; ring.classList.add("shake"); }
-    },210);
+      targetEl.classList.remove("hurt"); void targetEl.offsetWidth; targetEl.classList.add("hurt");
+      setTimeout(function(){targetEl.classList.remove("hurt");},320);
+      ring.classList.remove("shake"); void ring.offsetWidth; ring.classList.add("shake");
+    },120);
   }
   function onOver(ev){
     running=false; ended=true; if(rafId){cancelAnimationFrame(rafId);rafId=null;}
