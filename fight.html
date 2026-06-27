@@ -220,7 +220,7 @@
   .voicebar.live .micdot{background:#56e3c9; box-shadow:0 0 10px #56e3c9; animation:micpulse 1.1s ease-in-out infinite}
   @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.4}}
   .voicebar .vraw{font-style:italic; color:#6b7686; max-width:13em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
-  .voicebar .heard{font-weight:800; color:#ffd23f; text-transform:uppercase; min-width:1.4em; text-align:left}
+  .voicebar .heard{font-weight:800; color:#ffd23f; text-transform:uppercase; min-width:2.6em; text-align:left}
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
   .mictest[hidden]{display:none}
@@ -701,7 +701,7 @@
     return best;
   }
   function vstat(t){ var s=$("voicestat"); if(s) s.textContent=t; }
-  function feedVoice(L){ if(running&&!ended){ $("heard").textContent=L.toUpperCase(); inputLetter(L); } }
+  function feedVoice(L){ if(running&&!ended){ $("heard").textContent="→ "+L.toUpperCase(); inputLetter(L); } }   // show the forced result
   function startWeb(){                                 // fallback engine: browser Web Speech (OS default mic only)
     if(!SR){ vstat("voice needs Chrome or Edge"); return; }
     recWanted=true; sessLetters=0;
@@ -730,9 +730,9 @@
   var VOSK_MODEL_URL="assets/vosk-model-en.tar.gz", VOSK_LIB_URL="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js";
   var voskLibTried=false, voskModel=null, voskState="idle", voskRec=null, voskCtx=null, voskNode=null, voskStream=null, voskSess=0;
   function setVoskStat(t){ var s=$("voskstat"); if(s) s.textContent=t||""; }
-  function voskGrammar(){                              // restrict recognition to the spoken forms of Emma's letters
-    var w={}; for(var L in SAY){ SAY[L].forEach(function(s){ if(/^[a-z]+$/.test(s)) w[s]=1; }); }
-    var list=Object.keys(w); list.push("[unk]"); return JSON.stringify(list);
+  function voskGrammar(){                              // FORCE recognition to the spoken letter-names only — no "[unk]"
+    var w={}; for(var L in SAY){ SAY[L].forEach(function(s){ if(/^[a-z]+$/.test(s)) w[s]=1; }); }   // escape token, so every
+    return JSON.stringify(Object.keys(w));            // utterance is decoded as the closest letter and nothing else
   }
   function ensureVoskLib(cb){
     if(window.Vosk){ cb(); return; }
