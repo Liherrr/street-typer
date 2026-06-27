@@ -67,7 +67,8 @@
     text-shadow:2px 2px 0 #7c2d12, 0 0 16px rgba(255,138,30,.5)}
   .clock small{display:block;font-size:10px;color:var(--dim);letter-spacing:.14em;font-weight:600}
 
-  .ring{position:relative; width:min(94vw,820px); aspect-ratio:612/343; max-height:50vh; margin:0 auto 10px;
+  .ring{--ringh:min(50vh, calc(min(94vw,820px) / 1.784));   /* arena height; fighters scale off this so size stays a fixed share of the panel */
+    position:relative; width:min(94vw,820px); height:var(--ringh); margin:0 auto 10px;
     border:2px solid #3d2e7a; border-radius:14px; overflow:hidden;
     background:#cfc9a6 url("assets/background.gif") center bottom / cover no-repeat; image-rendering:pixelated;
     box-shadow:inset 0 0 46px rgba(0,0,0,.4)}
@@ -75,8 +76,8 @@
     background:linear-gradient(180deg,rgba(255,170,60,.18),rgba(120,60,20,.05) 60%,rgba(0,0,0,0));
     border-top:1px solid rgba(255,200,120,.18)}
   .fighter{position:absolute; bottom:8%; font-size:clamp(54px,9vw,84px); filter:drop-shadow(0 9px 8px rgba(0,0,0,.55)); transition:transform .12s}
-  .fighter .spr{display:block; height:calc(min(94vw,820px) / 3.67); width:auto; image-rendering:auto}   /* ~48% of the arena height, tied to the ring width */
-  .fighter.left{left:21%} .fighter.right{right:21%}   /* 640-wide frames; 21% in the centered 820px arena = close, weapons nearly meeting */
+  .fighter .spr{display:block; height:calc(var(--ringh) * 0.77); width:auto; image-rendering:auto}   /* ~77% of the arena height (big, like the screenshot) */
+  .fighter.left{left:7%} .fighter.right{right:7%}   /* 640-wide frames; at this size 7% keeps the same visual gap as the old 21% did when small */
   #ring.flip .spr{transform:scaleX(-1)}   /* P2 viewpoint: the two fighters were filmed facing opposite ways, so mirror the drawing (not the motion) */
   .fighter.hurt{animation:hurt .3s ease}
   @keyframes hurt{0%,100%{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))} 20%{filter:drop-shadow(0 0 14px #ff6b6b) brightness(1.8)} 30%{transform:translateX(-8px)} 60%{transform:translateX(4px)}}
