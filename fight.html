@@ -337,14 +337,14 @@
   Sprite.prototype.tick=function(dt){
     if(!this.cur) return;
     this.acc+=dt;
-    var slow=(this.state==="idle")?10:((this.state==="intro"||this.state==="win"||this.state==="lose")?2:1);
-    var spf=slow/this.cur.fps;   // idle/intro/win/lose play at half speed; attacks and hurt stay at normal speed
+    var slow=(this.state==="idle")?10:(this.state==="intro"?6:((this.state==="win"||this.state==="lose")?2:1));
+    var spf=slow/this.cur.fps;   // idle slow; intro stretched to ~span the 3-2-1; win/lose half speed; attacks/hurt normal
     while(this.acc>=spf){
       this.acc-=spf;
       if(this.frame<this.cur.urls.length-1){ this.img.src=this.cur.urls[++this.frame]; }
       else if(this.cur.loop){ this.frame=0; this.img.src=this.cur.urls[0]; }
       else {                                                  // one-shot finished
-        if(this.state==="win"||this.state==="lose"){ this.cur=null; return; }   // hold the final frame
+        if(this.state==="win"||this.state==="lose"||this.state==="intro"){ this.cur=null; return; }   // hold the final frame (intro holds its entrance pose until FIGHT! forces idle)
         var self=this; this.cur=null;
         if(this.holdMs>0){ this._hold=setTimeout(function(){ self._hold=null; self.play("idle"); }, this.holdMs); }
         else this.play("idle");                               // intro/attack/hurt -> back to idle
@@ -447,11 +447,11 @@
     cdOverlay.classList.add("on"); var steps=["3","2","1"]; aud();
     function cdBeat(txt,fight){ cdNum.textContent=txt; cdNum.classList.toggle("fight",!!fight);
       cdNum.classList.remove("pop"); void cdNum.offsetWidth; cdNum.classList.add("pop"); }
-    steps.forEach(function(s,k){setTimeout(function(){cdBeat(s,false);},k*900);});
-    setTimeout(function(){cdBeat("FIGHT!",true);},steps.length*900);
+    steps.forEach(function(s,k){setTimeout(function(){cdBeat(s,false);},k*1000);});
+    setTimeout(function(){ cdBeat("FIGHT!",true); if(useSprites){ sprites.f1.idle(); sprites.f2.idle(); } },steps.length*1000);   // FIGHT! shows the idle
   }
   function beginFight(ev){
-    setTimeout(function(){ cdOverlay.classList.remove("on"); cdNum.className="count"; }, 550);   // let the FIGHT! banner linger a beat into the round
+    cdOverlay.classList.remove("on"); cdNum.className="count";   // FIGHT! disappears exactly when the round begins (typing unlocks here)
     hp=ev.hp||hp; running=true; ended=false; startMs=performance.now();
     setHP(); rafId=requestAnimationFrame(loop);
   }

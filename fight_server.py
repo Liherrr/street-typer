@@ -231,7 +231,7 @@ class Match:
     def _begin_countdown(self):
         self.state = "countdown"
         self._broadcast({"t": "countdown", "secs": 3})
-        threading.Timer(3.0, self._begin_fight).start()
+        threading.Timer(4.0, self._begin_fight).start()   # 3-2-1 (3s) + FIGHT! (1s); round starts when FIGHT! clears
 
     def _begin_fight(self):
         with self.lock:
