@@ -220,7 +220,6 @@
   .voicebar.live .micdot{background:#56e3c9; box-shadow:0 0 10px #56e3c9; animation:micpulse 1.1s ease-in-out infinite}
   @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.4}}
   .voicebar .vraw{font-style:italic; color:#6b7686; max-width:13em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
-  .voicebar .saycue{font-weight:800; color:#56e3c9; text-transform:uppercase; letter-spacing:.04em}
   .voicebar .heard{font-weight:800; color:#ffd23f; text-transform:uppercase; min-width:2.6em; text-align:left}
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
@@ -316,7 +315,7 @@
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
       </div>
       <div class="hint" id="hint">type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes</div>
-      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span class="saycue" id="saycue"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span></div>
+      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span></div>
     </div>
   </section>
 </div>
@@ -345,7 +344,8 @@
 (function(){
   "use strict";
   var ALPH="abcdefghijklmnopqrstuvwxyz";
-  var EMMA_ALPH="abcdefghijklmnopqrstuvwxyz";   // Emma speaks the full 26: a forced-choice recognizer maps each utterance to the closest letter, so N stays high
+  var EMMA_ALPH="aefhilmorsuwxy";   // Emma speaks bare letters (fast, no mental mapping), but only the acoustically distinct ones:
+                                    // dropped the "ee"-rhyming E-set (kept E), the nasals (kept M), the "ay" rhymes J/K (kept A), and Q (kept U)
   var curAlph=ALPH, profile="calvin";
   var N=26, DURATION=60, GROUP=4, GROUPS_PER_ROW=6, ROWLEN=GROUP*GROUPS_PER_ROW;
   var seq=[], res=[], idx=0, sc=0, si=0, combo=0, bestCombo=0;
@@ -396,7 +396,7 @@
     h+='<span class="'+cls+'">'+ch+'</span>';}return h;}
   function render(){var rs=Math.floor(idx/ROWLEN)*ROWLEN;
     sheet.innerHTML='<div class="line cur">'+buildRow(rs,true)+'</div>'+
-      '<div class="line below">'+buildRow(rs+ROWLEN,false)+'</div>';fitSheet();updateKbd();updateSayCue();}
+      '<div class="line below">'+buildRow(rs+ROWLEN,false)+'</div>';fitSheet();updateKbd();}
 
   // Fit the letters to the box instead of the viewport. The font is sized from the box width and the
   // real rendered glyph width, so a row always fits with a 4-char block of slack on each side no matter
@@ -639,7 +639,7 @@
     var voice=(profile==="emma");
     $("voicebar").hidden = !voice;
     $("hint").textContent = voice
-      ? "say the code word the mic shows for each letter (V = Victor), much clearer than bare letters; every 4 lands an attack"
+      ? "say the highlighted letters out loud; every 4 lands an attack worth your hits minus your mistakes"
       : (profile==="elizabeth"
           ? "type the highlighted letters; the keyboard lights the current key and points an arrow at the next. Every 4 lands an attack"
           : "type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes");
@@ -661,10 +661,6 @@
       keys[i].classList.toggle("lit", k===cur);      // current key lights up
       keys[i].classList.toggle("next", k===nxt);     // arrow points to the next key
     }
-  }
-  function updateSayCue(){                            // voice: the code word to speak for the current letter
-    if(profile!=="emma") return;
-    var sc=$("saycue"); if(sc && seq[idx]!=null) sc.textContent="say: "+(NATO[seq[idx]]||seq[idx]).toUpperCase();
   }
 
   // ---------- Emma: voice input — forced choice over the 26 letters (closest letter to what was said) ----------
@@ -693,13 +689,15 @@
     for(i=1;i<=la;i++){ cur[0]=i; for(j=1;j<=lb;j++){ var c=a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1; cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+c); } for(j=0;j<=lb;j++) prev[j]=cur[j]; }
     return 1 - prev[lb]/Math.max(la,lb);
   }
-  function closestLetter(tok){                        // forced choice: the letter whose name is nearest to what was said
+  function closestLetter(tok){                        // forced choice: the pool letter whose name is nearest to what was said
     tok=(tok||"").toLowerCase().replace(/[^a-z]/g,"");
     if(!tok) return null;
-    if(WORD2LET[tok]) return WORD2LET[tok];            // an exact letter-name
-    if(tok.length===1 && curAlph.indexOf(tok)>=0) return tok;
-    var best=null, bestScore=0, k; for(k=0;k<SAY_WORDS.length;k++){ var s=_sim(tok,SAY_WORDS[k]); if(s>bestScore){ bestScore=s; best=WORD2LET[SAY_WORDS[k]]; } }
-    return bestScore>=0.5 ? best : null;              // map to the nearest letter unless it is clearly not a letter at all
+    var direct = WORD2LET[tok] || (tok.length===1 ? tok : null);
+    if(direct && curAlph.indexOf(direct)>=0) return direct;       // exact name or letter, and it is in Emma's pool
+    var best=null, bestScore=0, k;                                // otherwise snap to the nearest pool letter by name
+    for(k=0;k<SAY_WORDS.length;k++){ var L=WORD2LET[SAY_WORDS[k]]; if(curAlph.indexOf(L)<0) continue;
+      var s=_sim(tok,SAY_WORDS[k]); if(s>bestScore){ bestScore=s; best=L; } }
+    return bestScore>=0.5 ? best : null;              // map to the nearest pool letter unless it is clearly not a letter
   }
   function parseSpeech(s){                            // a chunk of recognized speech -> the letters it maps to
     s=(s||"").toLowerCase().replace(/[.,!?]/g,"").replace(/double[\s-]*(you|u|ya)/g," w ");
@@ -741,10 +739,9 @@
   var VOSK_MODEL_URL="assets/vosk-model-en.tar.gz", VOSK_LIB_URL="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js";
   var voskLibTried=false, voskModel=null, voskState="idle", voskRec=null, voskCtx=null, voskNode=null, voskStream=null, voskSess=0;
   function setVoskStat(t){ var s=$("voskstat"); if(s) s.textContent=t||""; }
-  function voskGrammar(){                              // FORCE recognition to the code words + bare letters, no "[unk]" —
-    var w={};                                          // one clean entry each (no competing variants), so the decoder
-    for(var L in NATO){ w[NATO[L]]=1; }                // can only emit a code word (the reliable path) ...
-    for(var i=0;i<26;i++){ w[ALPH[i]]=1; }             // ... or a bare letter, for confident speakers
+  function voskGrammar(){                              // FORCE recognition to Emma's pool, no "[unk]": each letter gets its
+    var w={};                                          // bare name (what she actually says) plus its code word as a silent
+    for(var i=0;i<curAlph.length;i++){ var L=curAlph[i]; w[L]=1; if(NATO[L]) w[NATO[L]]=1; }   // fallback for a stubborn letter
     return JSON.stringify(Object.keys(w));
   }
   function ensureVoskLib(cb){
