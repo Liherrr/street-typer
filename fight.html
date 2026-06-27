@@ -35,7 +35,9 @@
   .ghlink:hover{color:#0c1018; background:linear-gradient(180deg,#ffd23f,#ff9e2c); border-color:#ffd23f;
     box-shadow:0 0 24px rgba(255,178,77,.55); transform:translateY(-1px)}
   .ghlink svg{width:16px; height:16px; fill:currentColor}
-  .lede{color:#c3ccdb; font-size:15.5px; line-height:1.55; max-width:64ch; margin:0 0 18px}
+  .lede{color:#c3ccdb; font-size:15.5px; line-height:1.55; max-width:64ch; margin:0 0 14px}
+  .tip{font-family:var(--mono); font-size:13px; color:#e8c98c; line-height:1.6; max-width:64ch; margin:0 0 18px;
+    background:rgba(255,178,77,.07); border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:8px; padding:10px 14px}
   .btn{appearance:none; cursor:pointer; font-family:var(--sans); font-weight:650; font-size:16px; color:#0c1018;
     background:var(--lamp); border:none; border-radius:12px; padding:14px 28px; box-shadow:0 8px 24px rgba(255,178,77,.28); transition:transform .08s, box-shadow .12s}
   .btn:hover{transform:translateY(-1px)} .btn:active{transform:translateY(0)}
@@ -253,14 +255,15 @@
   <section id="lobby" class="screen on">
     <a class="ghlink" href="https://github.com/Liherrr/street-typer" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>View the source on GitHub</a>
     <h1 class="gametitle">STREET TYPER</h1>
-    <p class="lede">A live typing duel. Type the highlighted letters. It takes two players, each on their own
-      device with a physical keyboard; the match starts once both are on this page and have pressed Ready.</p>
+    <p class="lede">A live speed duel. Type the highlighted letters, or say them in voice mode. It takes two players,
+      each on their own device; the match starts once both are on this page and have pressed Ready.</p>
+    <p class="tip"><b>Tip:</b> read the letters four at a time and go as fast as you can. Every block of four you finish lands an attack, so speed wins the round.</p>
     <div class="lobcard">
       <div class="profsel">
         <div class="profhead">Who's playing? Pick your style, then ready up:</div>
         <div class="profrow">
           <button class="prof sel" data-prof="calvin"><div class="pn">Calvin</div><div class="pd">Classic &middot; type the letters</div></button>
-          <button class="prof" data-prof="elizabeth"><div class="pn">Elizabeth</div><div class="pd">Guided &middot; on-screen keyboard</div></button>
+          <button class="prof" data-prof="elizabeth"><div class="pn">Elizabeth</div><div class="pd">Guided &middot; type the letters</div></button>
           <button class="prof" data-prof="emma"><div class="pn">Emma</div><div class="pd">Voice &middot; say the word shown</div></button>
         </div>
       </div>
@@ -600,10 +603,10 @@
     cdBeat("3",false);                                                      // 3 @0s
     setTimeout(function(){ cdBeat("2",false); }, 1000);                     // 2 @1s
     setTimeout(function(){ cdBeat("1",false); }, 2000);                     // 1 @2s
-    setTimeout(function(){ cdBeat("TYPE!",true); if(useSprites){ sprites.f1.idle(); sprites.f2.idle(); } }, 3000);   // TYPE! @3s shows the idle; round starts at 4s
+    setTimeout(function(){ cdBeat("FIGHT!",true); if(useSprites){ sprites.f1.idle(); sprites.f2.idle(); } }, 3000);   // FIGHT! @3s shows the idle; round starts at 4s
   }
   function beginFight(ev){
-    cdOverlay.classList.remove("on"); cdNum.className="count";   // FIGHT! disappears exactly when the round begins (typing unlocks here)
+    cdOverlay.classList.remove("on"); cdNum.className="count";   // FIGHT! disappears exactly when the round begins (input unlocks here)
     hp=ev.hp||hp; running=true; ended=false; startMs=performance.now();
     setHP(); rafId=requestAnimationFrame(loop);
   }
