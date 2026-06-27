@@ -174,7 +174,10 @@ class Match:
             self.gen[pid] += 1
             q = queue.Queue()
             self.clients[pid] = q
-            self._broadcast_lobby()
+            if self.state == "over":
+                self._reset_to_lobby()     # a (re)join after a finished match -> fresh lobby so Ready works again
+            else:
+                self._broadcast_lobby()
             return pid, q, self.gen[pid]
 
     def leave(self, pid, gen, token):
@@ -288,17 +291,22 @@ class Match:
         self._broadcast({"t": "over", "winner": winner, "reason": reason,
                          "hp": self.hp(), "stats": stats, "n": N, "elapsed": round(el, 1)})
 
+    def _reset_to_lobby(self):
+        # reset the round but keep connected players; caller must hold self.lock
+        self.ready = {1: False, 2: False}
+        self.net = {1: 0.0, 2: 0.0}; self.peak = {1: 0.0, 2: 0.0}
+        self.sc = {1: 0, 2: 0}; self.si = {1: 0, 2: 0}
+        self.state = "lobby"; self.start_time = None; self.winner = None
+        if self.timer:
+            self.timer.cancel(); self.timer = None
+        self._broadcast({"t": "reset"})
+        self._broadcast_lobby()
+
     def rematch(self, pid):
         with self.lock:
             if self.state != "over":
                 return
-            # reset everything but keep connected players
-            self.ready = {1: False, 2: False}
-            self.net = {1: 0.0, 2: 0.0}; self.peak = {1: 0.0, 2: 0.0}
-            self.sc = {1: 0, 2: 0}; self.si = {1: 0, 2: 0}
-            self.state = "lobby"; self.start_time = None; self.winner = None
-            self._broadcast({"t": "reset"})
-            self._broadcast_lobby()
+            self._reset_to_lobby()
 
 
 # ---------------------------------------------------------------- HTTP handler
