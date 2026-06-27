@@ -129,6 +129,7 @@
   .line.above{opacity:.34} .line.below{opacity:.85}
   .ch{display:inline-block; color:var(--yel)}
   .ch.gap{margin-left:.66em}
+  .ch.subgap{margin-left:.3em}   /* Calvin's 5-block reads as 3+2 so it holds as two chunks, not five raw items */
   .ch.done{color:var(--done)} .ch.bad{color:var(--bad)}
   .ch.cur{color:#0c1018; background:linear-gradient(180deg,var(--lamp-core),var(--lamp)); border-radius:8px; box-shadow:0 0 18px 2px rgba(255,178,77,.45)}
   /* Emma: the same stream, but a read-and-say word per letter instead of the bare character */
@@ -230,6 +231,7 @@
   @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.4}}
   .voicebar .vraw{font-style:italic; color:#6b7686; max-width:13em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
   .voicebar .heard{font-weight:800; color:#ffd23f; text-transform:uppercase; min-width:2.6em; text-align:left}
+  .voicebar .ebits{margin-left:auto; padding-left:12px; color:#56e3c9; font-weight:700; letter-spacing:.02em}   /* Emma: live information-theory readout */
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
   .mictest[hidden]{display:none}
@@ -325,7 +327,7 @@
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
       </div>
       <div class="hint" id="hint">type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes</div>
-      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span></div>
+      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span><span class="ebits" id="ebits"></span></div>
     </div>
   </section>
 </div>
@@ -400,8 +402,8 @@
   // ---------- sequence + render ----------
   function randCh(){ if(profile==="emma") return emmaWords[(Math.random()*emmaWords.length)|0]; return curAlph[(Math.random()*curAlph.length)|0]; }
   function ensureBuf(){while(seq.length<idx+2*ROWLEN+2)seq.push(randCh());}
-  function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;bestCombo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;ensureBuf();}
-  function buildRow(start,isCur){var h="";for(var c=0;c<ROWLEN;c++){var i=start+c,cls="ch"+(c>0&&c%GROUP===0?" gap":""),ch="&nbsp;";
+  function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;bestCombo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;lastSpoken=null;ensureBuf();}
+  function buildRow(start,isCur){var h="";for(var c=0;c<ROWLEN;c++){var i=start+c,cls="ch"+(c>0&&c%GROUP===0?" gap":(GROUP===5&&c%5===3?" subgap":"")),ch="&nbsp;";
     if(i>=0&&seq[i]!=null){ch=seq[i];if(i<idx)cls+=(res[i]==="ok"?" done":" bad");else if(isCur&&i===idx)cls+=" cur";}
     h+='<span class="'+cls+'">'+ch+'</span>';}return h;}
   var WROW=4;                                         // Emma's word sheet: 4 words per row, two rows (no block clustering)
@@ -411,7 +413,9 @@
   function render(){
     if(profile==="emma"){var ws=Math.floor(idx/WROW)*WROW;        // words instead of letters: read-and-say each one
       sheet.innerHTML='<div class="wline cur">'+buildWordRow(ws,true)+'</div>'+
-        '<div class="wline below">'+buildWordRow(ws+WROW,false)+'</div>';updateKbd();return;}
+        '<div class="wline below">'+buildWordRow(ws+WROW,false)+'</div>';
+      var eb=$("ebits"); if(eb){ var bw=bpc(); eb.textContent=bw.toFixed(2)+" bits/word · "+Math.round(sc*bw)+" sent"; }   // information theory for Emma
+      updateKbd();return;}
     var rs=Math.floor(idx/ROWLEN)*ROWLEN;
     sheet.innerHTML='<div class="line cur">'+buildRow(rs,true)+'</div>'+
       '<div class="line below">'+buildRow(rs+ROWLEN,false)+'</div>';fitSheet();updateKbd();}
@@ -591,7 +595,7 @@
   function startCountdown(secs, solo){
     soloMatch=!!solo;
     $("oppnm").textContent = soloMatch ? "CPU" : (you===1?"PLAYER 2":"PLAYER 1");   // server is authoritative on solo vs 2-player
-    show("arena"); resetSeq(); render(); setupProfileUI();
+    show("arena"); setupProfileUI(); resetSeq(); render();   // profile (block size, kbd) is set before the sheet is built
     $("youfill").style.width="100%"; $("oppfill").style.width="100%"; $("youhp").textContent=hpMax; $("opphp").textContent=hpMax;
     $("f1").className="fighter left"; $("f2").className="fighter right";
     $("koText").className="kotext";                              // clear any leftover result text
@@ -608,7 +612,7 @@
   function beginFight(ev){
     cdOverlay.classList.remove("on"); cdNum.className="count";   // FIGHT! disappears exactly when the round begins (input unlocks here)
     hp=ev.hp||hp; running=true; ended=false; startMs=performance.now();
-    setHP(); rafId=requestAnimationFrame(loop);
+    setHP(); render(); rafId=requestAnimationFrame(loop);   // re-render once play is live so Elizabeth hears the first letter
   }
   function loop(){
     if(!running)return;
@@ -621,7 +625,8 @@
     if(!running||ended) return;
     if(profile==="emma" ? !bankSet[k] : curAlph.indexOf(k)===-1) return;   // ignore anything outside the active pool
     var t=seq[idx], ok=(k===t);
-    if(ok){ res[idx]="ok"; sc++; combo++; if(combo>bestCombo)bestCombo=combo; blockC++; thock(combo); }
+    if(ok){ res[idx]="ok"; sc++; combo++; if(combo>bestCombo)bestCombo=combo; blockC++; thock(combo);
+      if(profile==="emma"){ var hb=$("heard"); if(hb) hb.textContent+="  +"+bpc().toFixed(1)+" bits"; } }   // Emma: each correct word's self-information
     else { res[idx]="bad"; si++; combo=0; blockW++; buzz(); flashStage(true); }
     idx++; inBlock++; ensureBuf(); render();
     $("hSc").textContent=sc; $("hSi").textContent=si; $("hCombo").textContent=combo;
@@ -653,14 +658,16 @@
   });
   function setupProfileUI(){                         // arrange the arena for the chosen profile at round start
     stopMicTest();                                   // release the test mic so the recognizer can use it
+    GROUP  = (profile==="calvin") ? 5 : 4;           // Calvin is a fluent blind typist, so he reads and strikes in 5s; others in 4s
+    ROWLEN = (profile==="calvin") ? 25 : 24;         // keep the row about the same width (5x5 vs 4x6)
     $("kbd").hidden = (profile!=="elizabeth");
     var voice=(profile==="emma");
     $("voicebar").hidden = !voice;
     $("hint").textContent = voice
       ? "read the highlighted word out loud, just say what you see; every 4 lands an attack worth your hits minus your mistakes"
       : (profile==="elizabeth"
-          ? "type the highlighted letters; the keyboard lights the current key and points an arrow at the next. Every 4 lands an attack"
-          : "type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes");
+          ? "type the highlighted letters; the keyboard lights the current key and speaks it, and an arrow points to the next. Every 4 lands an attack"
+          : "type the highlighted letters; every 5 lands an attack worth your hits minus your mistakes");
     if(voice){ $("heard").textContent=""; startRec(); } else { stopRec(); }
     updateKbd();
   }
@@ -672,10 +679,18 @@
     KB_ROWS.forEach(function(row){ html+='<div class="krow">'; for(var i=0;i<row.length;i++){ html+='<div class="key" data-k="'+row[i]+'">'+row[i]+'</div>'; } html+='</div>'; });
     kb.innerHTML=html+'<svg class="kbarrow" aria-hidden="true"></svg>';
   })();
+  var lastSpoken=null;
+  function speakChar(c){                              // Elizabeth: read the current letter aloud, as fast and early as possible
+    try{ var s=window.speechSynthesis; if(!s) return;
+      s.cancel();                                     // drop anything pending so the newest letter plays now, not in a queue
+      var u=new SpeechSynthesisUtterance(c); u.rate=2.4; u.lang="en-US"; s.speak(u);
+    }catch(e){}
+  }
   function updateKbd(){
     if(profile!=="elizabeth") return;
     var kb=$("kbd"), cur=seq[idx], nxt=seq[idx+1], keys=kb.querySelectorAll(".key");
     for(var i=0;i<keys.length;i++){ keys[i].classList.toggle("lit", keys[i].getAttribute("data-k")===cur); }   // only the current key lights up
+    if(running && !ended && cur && cur!==lastSpoken){ speakChar(cur); lastSpoken=cur; }   // audio hint the instant she reaches a new letter
     drawKbArrow(kb, cur, nxt);                        // an arrow from the current key to the next one
   }
   function drawKbArrow(kb, cur, nxt){
