@@ -80,7 +80,7 @@
   @keyframes hurt{0%,100%{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))} 20%{filter:drop-shadow(0 0 14px #ff6b6b) brightness(1.8)} 30%{transform:translateX(-8px)} 60%{transform:translateX(4px)}}
   .fighter.right.hurt{animation:hurtR .3s ease}
   @keyframes hurtR{0%,100%{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))} 20%{filter:drop-shadow(0 0 14px #ff6b6b) brightness(1.8)} 30%{transform:translateX(8px)} 60%{transform:translateX(-4px)}}
-  .fighter.atk.left{transform:translateX(42px) scale(1.06)} .fighter.atk.right{transform:translateX(-42px) scale(1.06)}
+  /* attackers stay put: the attack reads from the sprite animation + the impact on the opponent (no forward lunge) */
   .fighter.ko{transform:rotate(82deg) translateY(18px); filter:grayscale(.7) drop-shadow(0 0 8px #000); opacity:.85}
   .fighter.ko.right{transform:rotate(82deg) translateY(18px)}
   .shake{animation:shake .22s ease}
@@ -328,7 +328,9 @@
   };
   Sprite.prototype.tick=function(dt){
     if(!this.cur) return;
-    this.acc+=dt; var spf=2/this.cur.fps;   // 2x slower than the manifest fps
+    this.acc+=dt;
+    var slow=(this.state==="idle"||this.state==="intro"||this.state==="win"||this.state==="lose")?2:1;
+    var spf=slow/this.cur.fps;   // idle/intro/win/lose play at half speed; attacks and hurt stay at normal speed
     while(this.acc>=spf){
       this.acc-=spf;
       if(this.frame<this.cur.urls.length-1){ this.img.src=this.cur.urls[++this.frame]; }
