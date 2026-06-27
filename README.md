@@ -111,6 +111,16 @@ Competition raises `B` for the same pair of hands. Performance climbs with arous
 
 Two players, one shared URL. Deploy it as a web service (Render's free tier works) and both players open the same link: the first becomes Player 1, the second Player 2. The round begins only when both players are on the page and each presses Ready. The start command is `python fight_server.py --cloud`. Full steps are in **[DEPLOY.md](DEPLOY.md)**. To play on a local network instead, run `python fight_server.py` on each machine and the second discovers the first automatically. Any device with a physical keyboard works, including a tablet with an attached keyboard (Bluetooth, USB, or a folio keyboard).
 
+## Practice solo (vs the computer)
+
+The game is built for two people, but if you are on your own you can spar with a computer opponent instead of waiting for someone to join. Pick a difficulty in the lobby:
+
+- Easy: the computer transmits about 6 bits per second.
+- Middle: about 10 bits per second.
+- Hard: about 14 bits per second.
+
+The computer "types" at the rate you choose, with a little variation in pace so it is not a metronome, and the rules are the same as a real match: you win by transmitting faster than it does. The difficulty doubles as a concrete bits-per-second target to train against. This is an optional add-on; the real game is the two-player duel.
+
 ## Custom fighters
 
 Each character is a folder of transparent frame images plus a `manifest.json`, with the states `intro`, `idle`, `attack1` through `attack4`, `hurt`, `win`, and `lose`. Drop in your own filmed, step-printed frames and they appear with no code change. The filming guide, the processing pipeline, and the acceptance criteria are in **[PROCESSING.md](PROCESSING.md)**.

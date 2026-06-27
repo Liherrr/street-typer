@@ -29,6 +29,7 @@ import json
 import math
 import os
 import queue
+import random
 import socket
 import threading
 import time
@@ -162,6 +163,7 @@ class Match:
         self.start_time = None
         self.winner = None
         self.timer = None
+        self.bot = None                # solo mode: {"pid": <bot seat>, "bps": <target>}, else None
 
     # ---- membership (token-keyed so a brief EventSource reconnect reclaims the SAME slot) ----
     def join(self, token):
@@ -194,7 +196,9 @@ class Match:
                     self.slots[pid] = None
                     self.ready[pid] = False
                     other = 2 if pid == 1 else 1
-                    if self.state in ("countdown", "fight") and not self.winner and self.slots[other]:
+                    if self.bot is not None and self.bot["pid"] == other:
+                        self._reset_to_lobby()       # human left a solo match -> tear it down (clears the bot)
+                    elif self.state in ("countdown", "fight") and not self.winner and self.slots[other]:
                         self._finish(winner=other, reason="opponent left")
                     else:
                         self._broadcast_lobby()
@@ -214,8 +218,12 @@ class Match:
         return {1: max(0, round(HP_MAX - BIT_PER_CHAR * self.peak[2])),   # p1 HP hurt by p2's damage
                 2: max(0, round(HP_MAX - BIT_PER_CHAR * self.peak[1]))}
 
+    def _present(self, pid):
+        # a seat counts as present if a real client holds it, or the computer occupies it (solo)
+        return pid in self.clients or (self.bot is not None and self.bot["pid"] == pid)
+
     def _broadcast_lobby(self):
-        self._broadcast({"t": "lobby", "present": sorted(self.clients.keys()),
+        self._broadcast({"t": "lobby", "present": [p for p in (1, 2) if self._present(p)],
                          "ready": self.ready, "hpMax": HP_MAX, "n": N, "state": self.state})
 
     # ---- actions ----
@@ -225,12 +233,12 @@ class Match:
                 return
             self.ready[pid] = bool(val)
             self._broadcast_lobby()
-            if self.clients.get(1) and self.clients.get(2) and self.ready[1] and self.ready[2]:
+            if self._present(1) and self._present(2) and self.ready[1] and self.ready[2]:
                 self._begin_countdown()
 
     def _begin_countdown(self):
         self.state = "countdown"
-        self._broadcast({"t": "countdown", "secs": 3})
+        self._broadcast({"t": "countdown", "secs": 3, "solo": self.bot is not None})
         threading.Timer(4.0, self._begin_fight).start()   # 3-2-1 (3s) + FIGHT! (1s); round starts when FIGHT! clears
 
     def _begin_fight(self):
@@ -242,6 +250,31 @@ class Match:
             self._broadcast({"t": "fight", "duration": DURATION, "hp": self.hp()})
             self.timer = threading.Timer(DURATION, self._on_timeout)
             self.timer.start()
+            if self.bot is not None:
+                threading.Thread(target=self._bot_loop, args=(self.bot,), daemon=True).start()
+
+    def _bot_loop(self, bot):
+        # The computer opponent. It completes 4-letter blocks at randomized intervals whose average
+        # yields ~bps bits/second of damage (each interval scales with that block's bits, so the
+        # realized rate self-corrects to the target). Mostly clean, with an occasional slip. The block
+        # is chosen AND applied while holding the lock and checking `self.bot is bot` (the exact dict
+        # this thread was started for), so a finished/reset/replaced game can never take a stale hit.
+        pid, bps = bot["pid"], bot["bps"]
+        time.sleep(random.uniform(0.5, 1.1))              # don't strike the instant the round opens
+        kind = 0
+        while True:
+            with self.lock:
+                if self.state != "fight" or self.bot is not bot:
+                    return
+                correct, wrong = (3, 1) if random.random() < 0.15 else (4, 0)
+                self.attack(pid, correct, wrong, kind)
+            kind = (kind + 1) % 5
+            bits = BIT_PER_CHAR * max(0, correct - wrong)
+            end = time.monotonic() + (bits / bps) * random.uniform(0.7, 1.3)
+            while time.monotonic() < end:
+                if self.state != "fight" or self.bot is not bot:
+                    return
+                time.sleep(0.05)
 
     def attack(self, pid, correct, wrong, kind):
         with self.lock:
@@ -294,6 +327,7 @@ class Match:
 
     def _reset_to_lobby(self):
         # reset the round but keep connected players; caller must hold self.lock
+        self._clear_bot()
         self.ready = {1: False, 2: False}
         self.net = {1: 0.0, 2: 0.0}; self.peak = {1: 0.0, 2: 0.0}
         self.sc = {1: 0, 2: 0}; self.si = {1: 0, 2: 0}
@@ -324,6 +358,35 @@ class Match:
             self.ready[other] = False
             self.gen[other] += 1                    # stale-out the kicked connection's slot claim
             self._reset_to_lobby()                  # fresh lobby for whoever remains
+
+    def start_solo(self, human_pid, bps):
+        # Optional single-player mode: fill the empty seat with a computer that "types" at ~bps
+        # bits/second, so the human has to out-transmit it to win. The 2-player game is unchanged.
+        with self.lock:
+            if human_pid not in (1, 2) or human_pid not in self.clients:
+                return
+            if self.state == "over":
+                self._reset_to_lobby()              # allow replay-solo straight from the end screen
+            if self.state != "lobby":
+                return
+            other = 2 if human_pid == 1 else 1
+            if self.slots[other] is not None or other in self.clients:
+                return                              # a real player holds the other seat -> no solo
+            self.slots[other] = "BOT"
+            self.ready[other] = True
+            self.bot = {"pid": other, "bps": max(1.0, min(30.0, float(bps)))}
+            self.ready[human_pid] = True
+            self._broadcast_lobby()
+            if self.ready[1] and self.ready[2]:
+                self._begin_countdown()
+
+    def _clear_bot(self):
+        if self.bot is not None:
+            bp = self.bot["pid"]
+            if self.slots.get(bp) == "BOT":
+                self.slots[bp] = None
+            self.ready[bp] = False
+            self.bot = None
 
 
 # ---------------------------------------------------------------- HTTP handler
@@ -407,6 +470,8 @@ class Handler(BaseHTTPRequestHandler):
                 m.rematch(pid)
             elif t == "kick":
                 m.kick(pid)
+            elif t == "solo":
+                m.start_solo(pid, ev.get("bps", 10))
         return self._json({"ok": True})
 
     def _serve_html(self):
