@@ -306,9 +306,10 @@
   // ---------- networking ----------
   // ---------- character sprites (filmed frames; falls back to the emoji fighters) ----------
   var useSprites=false, sprites={f1:null,f2:null}, lastSpr=0, pendingIntro=false;
+  var PLAYFPS=50;   // playback rate (5x the old 10): with 5x-denser frame sets, animations play at the same speed but much smoother. Set in code, not the manifest.
   function pad2(i){ return i<10?"0"+i:""+i; }
   function Sprite(el, dir, man){
-    this.el=el; this.dir=dir; this.man=man; this.fps=man.fps||10;
+    this.el=el; this.dir=dir; this.man=man; this.fps=PLAYFPS;   // playback rate is fixed in code, regardless of the manifest's fps field
     this.img=document.createElement("img"); this.img.className="spr"; this.img.alt="";
     el.textContent=""; el.appendChild(this.img);
     this.cur=null; this.state=""; this.frame=0; this.acc=0; this.play("idle");
@@ -360,7 +361,7 @@
     var dt=lastSpr?(now-lastSpr)/1000:0; lastSpr=now; if(dt>0.1)dt=0.1;
     try{ if(sprites.f1) sprites.f1.tick(dt); if(sprites.f2) sprites.f2.tick(dt); }catch(e){}
   }
-  function startTick(){ if(tickTimer) return; lastSpr=0; tickTimer=setInterval(spriteTick, 33); }   // setInterval, not rAF, so animation never pauses when the tab/window is hidden
+  function startTick(){ if(tickTimer) return; lastSpr=0; tickTimer=setInterval(spriteTick, 16); }   // ~60Hz tick (enough to drive 50fps); setInterval, not rAF, so it never pauses when the tab/window is hidden
   function playIntro(){ if(useSprites && sprites.f1 && sprites.f2){ pendingIntro=false; sprites.f1.intro(); sprites.f2.intro(); } }
   function preload(urls){ return Promise.all(urls.map(function(u){ return new Promise(function(res,rej){ var im=new Image(); im.onload=res; im.onerror=rej; im.src=u; }); })); }
   function preloadAll(dir,man){ for(var st in man.states){ var s=man.states[st],ext=man.ext||"png"; for(var i=1;i<=s.count;i++){ (new Image()).src=dir+"/"+st+"_"+pad2(i)+"."+ext; } } }
