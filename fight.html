@@ -220,6 +220,7 @@
   .voicebar.live .micdot{background:#56e3c9; box-shadow:0 0 10px #56e3c9; animation:micpulse 1.1s ease-in-out infinite}
   @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.4}}
   .voicebar .vraw{font-style:italic; color:#6b7686; max-width:13em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
+  .voicebar .saycue{font-weight:800; color:#56e3c9; text-transform:uppercase; letter-spacing:.04em}
   .voicebar .heard{font-weight:800; color:#ffd23f; text-transform:uppercase; min-width:2.6em; text-align:left}
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
@@ -315,7 +316,7 @@
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
       </div>
       <div class="hint" id="hint">type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes</div>
-      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span></div>
+      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span class="saycue" id="saycue"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span></div>
     </div>
   </section>
 </div>
@@ -395,7 +396,7 @@
     h+='<span class="'+cls+'">'+ch+'</span>';}return h;}
   function render(){var rs=Math.floor(idx/ROWLEN)*ROWLEN;
     sheet.innerHTML='<div class="line cur">'+buildRow(rs,true)+'</div>'+
-      '<div class="line below">'+buildRow(rs+ROWLEN,false)+'</div>';fitSheet();updateKbd();}
+      '<div class="line below">'+buildRow(rs+ROWLEN,false)+'</div>';fitSheet();updateKbd();updateSayCue();}
 
   // Fit the letters to the box instead of the viewport. The font is sized from the box width and the
   // real rendered glyph width, so a row always fits with a 4-char block of slack on each side no matter
@@ -638,7 +639,7 @@
     var voice=(profile==="emma");
     $("voicebar").hidden = !voice;
     $("hint").textContent = voice
-      ? "speak the highlighted letters out loud; every 4 lands an attack worth your hits minus your mistakes"
+      ? "say the code word the mic shows for each letter (V = Victor), much clearer than bare letters; every 4 lands an attack"
       : (profile==="elizabeth"
           ? "type the highlighted letters; the keyboard lights the current key and points an arrow at the next. Every 4 lands an attack"
           : "type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes");
@@ -661,6 +662,10 @@
       keys[i].classList.toggle("next", k===nxt);     // arrow points to the next key
     }
   }
+  function updateSayCue(){                            // voice: the code word to speak for the current letter
+    if(profile!=="emma") return;
+    var sc=$("saycue"); if(sc && seq[idx]!=null) sc.textContent="say: "+(NATO[seq[idx]]||seq[idx]).toUpperCase();
+  }
 
   // ---------- Emma: voice input — forced choice over the 26 letters (closest letter to what was said) ----------
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, recWanted=false, sessLetters=0;
@@ -674,6 +679,13 @@
     q:["q","cue","queue","kew"], r:["r","are","ar"], s:["s","es","ess"], t:["t","tee","tea"],
     u:["u","you","yu","ewe"], v:["v","vee","ve"], w:["w","double u","dub","dubya"], x:["x","ex","eks","ax"],
     y:["y","why","wy","wai"], z:["z","zee","zed","zi"]};
+  // NATO/ICAO spelling alphabet: distinct, multi-syllable, common words a general recognizer nails, unlike the
+  // "ee"-rhyming bare letters (the E-set). Players are shown the code word and speak it; we map it back to the letter.
+  var NATO={a:"alpha",b:"bravo",c:"charlie",d:"delta",e:"echo",f:"foxtrot",g:"golf",h:"hotel",i:"india",j:"juliet",
+    k:"kilo",l:"lima",m:"mike",n:"november",o:"oscar",p:"papa",q:"quebec",r:"romeo",s:"sierra",t:"tango",
+    u:"uniform",v:"victor",w:"whiskey",x:"xray",y:"yankee",z:"zulu"};
+  for(var _n in NATO){ SAY[_n].push(NATO[_n]); }     // teach the closest-match the code words too
+  SAY.a.push("alfa"); SAY.j.push("juliett");          // common alternate spellings
   var WORD2LET={}, SAY_WORDS=[]; for(var _L in SAY){ SAY[_L].forEach(function(w){ WORD2LET[w]=_L; SAY_WORDS.push(w); }); }
   function _sim(a,b){                                 // 0..1 string similarity (normalised edit distance)
     var la=a.length, lb=b.length; if(!la||!lb) return 0;
@@ -729,9 +741,11 @@
   var VOSK_MODEL_URL="assets/vosk-model-en.tar.gz", VOSK_LIB_URL="https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js";
   var voskLibTried=false, voskModel=null, voskState="idle", voskRec=null, voskCtx=null, voskNode=null, voskStream=null, voskSess=0;
   function setVoskStat(t){ var s=$("voskstat"); if(s) s.textContent=t||""; }
-  function voskGrammar(){                              // FORCE recognition to the spoken letter-names only — no "[unk]"
-    var w={}; for(var L in SAY){ SAY[L].forEach(function(s){ if(/^[a-z]+$/.test(s)) w[s]=1; }); }   // escape token, so every
-    return JSON.stringify(Object.keys(w));            // utterance is decoded as the closest letter and nothing else
+  function voskGrammar(){                              // FORCE recognition to the code words + bare letters, no "[unk]" —
+    var w={};                                          // one clean entry each (no competing variants), so the decoder
+    for(var L in NATO){ w[NATO[L]]=1; }                // can only emit a code word (the reliable path) ...
+    for(var i=0;i<26;i++){ w[ALPH[i]]=1; }             // ... or a bare letter, for confident speakers
+    return JSON.stringify(Object.keys(w));
   }
   function ensureVoskLib(cb){
     if(window.Vosk){ cb(); return; }
@@ -763,7 +777,9 @@
   function startVosk(){
     voskSess=0;
     var dev=$("micsel")?$("micsel").value:"";
-    navigator.mediaDevices.getUserMedia({audio: dev?{deviceId:{exact:dev},channelCount:1}:{channelCount:1}}).then(function(stream){
+    var mc={channelCount:1, echoCancellation:false, noiseSuppression:false, autoGainControl:false};   // raw audio: DSP smears the letter onsets
+    if(dev) mc.deviceId={exact:dev};
+    navigator.mediaDevices.getUserMedia({audio: mc}).then(function(stream){
       voskStream=stream;
       try{ voskRec=new voskModel.KaldiRecognizer(16000, voskGrammar()); }
       catch(e){ voskRec=new voskModel.KaldiRecognizer(16000); }
@@ -818,7 +834,9 @@
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ setMtStat("this browser can't open the microphone (use Chrome or Edge)","warn"); return; }
     var dev=$("micsel").value;
     setMtStat("opening the microphone…","");
-    navigator.mediaDevices.getUserMedia({audio: dev?{deviceId:{exact:dev}}:true}).then(function(stream){
+    var mc={echoCancellation:false, noiseSuppression:false, autoGainControl:false};
+    if(dev) mc.deviceId={exact:dev};
+    navigator.mediaDevices.getUserMedia({audio: mc}).then(function(stream){
       micStream=stream; enumMics();                 // device labels become available once permission is granted
       micCtx=new(window.AudioContext||window.webkitAudioContext)();
       var src=micCtx.createMediaStreamSource(stream), an=micCtx.createAnalyser();
