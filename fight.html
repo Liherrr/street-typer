@@ -134,8 +134,18 @@
   .pcol{background:#0c1422; border:1px solid var(--line); border-radius:12px; padding:14px}
   .pcol.win{border-color:var(--lamp); box-shadow:0 0 0 1px var(--lamp) inset}
   .pcol .ttl{font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim)}
-  .pcol .b{font-family:var(--mono); font-size:34px; font-weight:760; color:var(--data); margin:4px 0}
+  .pcol .bwrap{display:flex; align-items:baseline; justify-content:center; gap:7px; margin:4px 0}
+  .pcol .b{font-family:var(--mono); font-size:36px; font-weight:760; color:var(--data)}
+  .pcol .bunit{font-family:var(--mono); font-size:14px; color:var(--dim)}
   .pcol .sub{font-family:var(--mono); font-size:12px; color:#8b96a8}
+  .kotext{position:absolute; left:0; right:0; top:46%; transform:translateY(-50%); text-align:center; pointer-events:none; z-index:6;
+    font-family:var(--sans); font-weight:900; font-style:italic; text-transform:uppercase; letter-spacing:.02em;
+    font-size:clamp(34px,6.5vw,60px); opacity:0; color:#ffd23f;
+    text-shadow:3px 3px 0 #7c2d12,-2px 0 #c2410c,2px 0 #c2410c,0 -2px #c2410c,0 0 30px rgba(255,138,30,.6)}
+  .kotext.lose{color:#ff6b6b; text-shadow:3px 3px 0 #5a1414,0 0 30px rgba(255,80,80,.5)}
+  .kotext.draw{color:#cbd3e1; text-shadow:3px 3px 0 #1b2436}
+  .kotext.show{animation:kopop .45s ease-out forwards}
+  @keyframes kopop{0%{opacity:0;transform:translateY(-50%) scale(.5)}60%{opacity:1;transform:translateY(-50%) scale(1.12)}100%{opacity:1;transform:translateY(-50%) scale(1)}}
   .vsmid{display:flex; align-items:center; font-family:var(--mono); font-weight:800; color:var(--dim)}
   .formula{font-family:var(--mono); font-size:12px; color:#6b7686; line-height:1.7; background:#0a111d; border:1px solid var(--line); border-radius:10px; padding:11px 13px; margin:12px 0 16px}
 </style>
@@ -177,6 +187,7 @@
     <div class="ring" id="ring">
       <div class="fighter left" id="f1">🥷</div>
       <div class="fighter right" id="f2">🤖</div>
+      <div class="kotext" id="koText"></div>
     </div>
     <div class="stage" id="stage">
       <div class="flash" id="flash"></div>
@@ -199,9 +210,9 @@
     <div class="winner" id="winTxt">—</div>
     <div class="mono" id="winReason" style="color:#8b96a8;font-size:13px"></div>
     <div class="vs">
-      <div class="pcol" id="colYou"><div class="ttl">You</div><div class="b" id="byou">0.00</div><div class="sub" id="subyou">b/s</div></div>
+      <div class="pcol" id="colYou"><div class="ttl">You</div><div class="bwrap"><span class="b" id="byou">0.00</span><span class="bunit">b/s</span></div><div class="sub" id="subyou">Sc 0 · Si 0</div></div>
       <div class="vsmid">VS</div>
-      <div class="pcol" id="colOpp"><div class="ttl">Rival</div><div class="b" id="bopp">0.00</div><div class="sub" id="subopp">b/s</div></div>
+      <div class="pcol" id="colOpp"><div class="ttl">Rival</div><div class="bwrap"><span class="b" id="bopp">0.00</span><span class="bunit">b/s</span></div><div class="sub" id="subopp">Sc 0 · Si 0</div></div>
     </div>
     <div class="formula" id="endFormula"></div>
     <div class="row" style="justify-content:center">
@@ -337,14 +348,14 @@
   Sprite.prototype.idle=function(){ this.play("idle"); };
   Sprite.prototype.win =function(){ this.play(this.man.states.win ?"win" :"idle"); };
   Sprite.prototype.lose=function(){ this.play(this.man.states.lose?"lose":"idle"); };
-  var tickOn=false;
-  function spriteTick(ts){
-    if(!useSprites){ tickOn=false; return; }
-    var dt=lastSpr?(ts-lastSpr)/1000:0; lastSpr=ts; if(dt>0.1)dt=0.1;
+  var tickTimer=null;
+  function spriteTick(){
+    if(!useSprites){ if(tickTimer){ clearInterval(tickTimer); tickTimer=null; } return; }
+    var now=(window.performance&&performance.now)?performance.now():+new Date();
+    var dt=lastSpr?(now-lastSpr)/1000:0; lastSpr=now; if(dt>0.1)dt=0.1;
     try{ if(sprites.f1) sprites.f1.tick(dt); if(sprites.f2) sprites.f2.tick(dt); }catch(e){}
-    requestAnimationFrame(spriteTick);
   }
-  function startTick(){ if(tickOn) return; tickOn=true; lastSpr=0; requestAnimationFrame(spriteTick); }
+  function startTick(){ if(tickTimer) return; lastSpr=0; tickTimer=setInterval(spriteTick, 33); }   // setInterval, not rAF, so animation never pauses when the tab/window is hidden
   function preload(urls){ return Promise.all(urls.map(function(u){ return new Promise(function(res,rej){ var im=new Image(); im.onload=res; im.onerror=rej; im.src=u; }); })); }
   function preloadAll(dir,man){ for(var st in man.states){ var s=man.states[st],ext=man.ext||"png"; for(var i=1;i<=s.count;i++){ (new Image()).src=dir+"/"+st+"_"+pad2(i)+"."+ext; } } }
   var charsInit=false;
@@ -470,25 +481,28 @@
   function onOver(ev){
     running=false; ended=true; if(rafId){cancelAnimationFrame(rafId);rafId=null;}
     hp=ev.hp||hp; setHP();
+    var won = ev.winner===you, draw=ev.winner===0;
     if(ev.winner!==0){
       var winKey=(ev.winner===you)?"f1":"f2", loseKey=(ev.winner===you)?"f2":"f1";
       if(useSprites){ if(sprites[winKey]) sprites[winKey].win(); if(sprites[loseKey]) sprites[loseKey].lose(); }
       else { $(loseKey).classList.add("ko"); }
       koSnd();
     } else if(useSprites){ sprites.f1.idle(); sprites.f2.idle(); }
-    var st=ev.stats||{}, sy=st[you]||{B:0,sc:0,si:0}, so=st[opp()]||{B:0,sc:0,si:0};
-    var won = ev.winner===you, draw=ev.winner===0;
+    // arcade-style result over the arena while the win/lose animation plays
+    var ko=$("koText"); ko.textContent = draw?"DRAW":(won?"YOU WIN":"YOU LOSE");
+    ko.className = "kotext show "+(draw?"draw":(won?"win":"lose"));
+    // build the stats now, but only reveal them after the animation has played
+    var st=ev.stats||{}, sy=st[you]||{B:0,sc:0,si:0}, so=st[opp()]||{B:0,sc:0,si:0}, Nn=(ev.n||26);
     $("winTxt").textContent = draw?"DRAW":(won?"YOU WIN":"YOU LOSE");
     $("winTxt").style.color = draw?"#8b96a8":(won?"#56e3c9":"#ff6b6b");
-    $("winReason").textContent = "by "+(ev.reason||"")+" · N="+(ev.n||26)+" · HP "+hp[you]+" vs "+hp[opp()];
-    $("byou").textContent=(sy.B||0).toFixed(2); $("subyou").textContent="b/s · Sc "+sy.sc+" · Si "+sy.si;
-    $("bopp").textContent=(so.B||0).toFixed(2); $("subopp").textContent="b/s · Sc "+so.sc+" · Si "+so.si;
+    $("winReason").textContent = "by "+(ev.reason||"")+" · HP "+hp[you]+" vs "+hp[opp()];
+    $("byou").textContent=(sy.B||0).toFixed(2); $("subyou").textContent="Sc "+sy.sc+" · Si "+sy.si;
+    $("bopp").textContent=(so.B||0).toFixed(2); $("subopp").textContent="Sc "+so.sc+" · Si "+so.si;
     $("colYou").classList.toggle("win",won); $("colOpp").classList.toggle("win",ev.winner===opp());
-    $("endFormula").innerHTML="B = log2("+(ev.n||26)+"−1) × max(Sc−Si,0) / 60 · attacks deal "+bpc().toFixed(2)+" dmg per clean letter · HP "+hpMax+" = 20 b/s × 60 s";
-    banner(draw?"DRAW":(won?"VICTORY":"K.O."), won?"#56e3c9":"#ff6b6b");
-    endOverlay.classList.add("on");
+    $("endFormula").innerHTML="B = log2(N−1) × max(Sc − Si, 0) / t<br>your B = log2("+(Nn-1)+") × max("+sy.sc+" − "+sy.si+", 0) / 60 = <b style='color:#ffd23f'>"+(sy.B||0).toFixed(2)+" b/s</b>";
+    setTimeout(function(){ ko.className="kotext"; endOverlay.classList.add("on"); }, 2800);
   }
-  function toLobby(){ endOverlay.classList.remove("on"); cdOverlay.classList.remove("on"); show("lobby"); }
+  function toLobby(){ endOverlay.classList.remove("on"); cdOverlay.classList.remove("on"); var k=$("koText"); if(k)k.className="kotext"; show("lobby"); }
 
   function doReady(){ aud(); $("readyBtn").disabled=true; post({t:"ready", ready:true}); }
   $("readyBtn").addEventListener("click", doReady);
