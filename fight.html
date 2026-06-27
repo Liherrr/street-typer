@@ -233,11 +233,6 @@
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
   .mictest[hidden]{display:none}
-  .nrow{margin-top:12px; padding-top:11px; border-top:1px solid var(--line); font-family:var(--mono); font-size:12px; color:#aab4c6}
-  .nrow .nhint{color:#7c8aa0}
-  .nctl{display:flex; align-items:center; gap:11px; margin-top:7px}
-  .nctl input[type=range]{flex:1; accent-color:var(--lamp); cursor:pointer}
-  .nctl output{min-width:3.4em; text-align:right; font-weight:800; color:#ffd23f; font-size:14px}
   .mthead{font-family:var(--mono); font-size:12px; color:#aab4c6; margin:0 0 10px}
   .mtrow{display:flex; gap:10px; align-items:center; margin-bottom:11px; flex-wrap:wrap}
   .micsel{flex:1; min-width:150px; font-family:var(--mono); font-size:12px; color:#dbe2ee; background:#0c1422; border:1px solid var(--line); border-radius:8px; padding:7px 9px}
@@ -262,7 +257,7 @@
     <h1 class="gametitle">STREET TYPER</h1>
     <p class="lede">A live speed duel. Type the highlighted letters, or say them in voice mode. It takes two players,
       each on their own device; the match starts once both are on this page and have pressed Ready.</p>
-    <p class="tip"><b>Tip:</b> read the letters four at a time and go as fast as you can. Every block of four you finish lands an attack, so speed wins the round.</p>
+    <p class="tip"><b>Tip:</b> whether you type or speak, take them four at a time and go as fast as you can. Every four you finish lands an attack, so speed wins the round.</p>
     <div class="lobcard">
       <div class="profsel">
         <div class="profhead">Who's playing? Pick your style, then ready up:</div>
@@ -280,10 +275,6 @@
         <div class="meter"><div class="meterfill" id="meterfill"></div><div class="thr" style="left:24%"></div></div>
         <div class="mtstat" id="mtstat">checking your microphone, say a few letters out loud</div>
         <div class="mtnote" id="voskstat">the offline voice model loads in the background when you pick Emma</div>
-        <div class="nrow">
-          <div>Word-bank size N <span class="nhint">&middot; benchmark: common, easy-to-say words (fox / alpha style), added most-distinct first; higher N packs them closer</span></div>
-          <div class="nctl"><input type="range" id="nslider" min="26" max="3000" step="1" value="26"><output id="nval">26</output></div>
-        </div>
       </div>
       <div class="seats">
         <div class="seat" id="seat1"><div class="who">Player 1 (host)</div><div class="st" id="st1">—</div><button class="kick" id="kick1" hidden>Kick out</button></div>
@@ -413,8 +404,8 @@
   function buildRow(start,isCur){var h="";for(var c=0;c<ROWLEN;c++){var i=start+c,cls="ch"+(c>0&&c%GROUP===0?" gap":""),ch="&nbsp;";
     if(i>=0&&seq[i]!=null){ch=seq[i];if(i<idx)cls+=(res[i]==="ok"?" done":" bad");else if(isCur&&i===idx)cls+=" cur";}
     h+='<span class="'+cls+'">'+ch+'</span>';}return h;}
-  var WROW=GROUP*2;                                   // Emma's word sheet: 2 blocks (8 words) per row
-  function buildWordRow(start,isCur){var h="";for(var c=0;c<WROW;c++){var i=start+c,cls="wd"+(c>0&&c%GROUP===0?" gap":""),w="&nbsp;";
+  var WROW=4;                                         // Emma's word sheet: 4 words per row, two rows (no block clustering)
+  function buildWordRow(start,isCur){var h="";for(var c=0;c<WROW;c++){var i=start+c,cls="wd",w="&nbsp;";
     if(i>=0&&seq[i]!=null){w=seq[i];if(i<idx)cls+=(res[i]==="ok"?" done":" bad");else if(isCur&&i===idx)cls+=" cur";}
     h+='<span class="'+cls+'">'+w+'</span>';}return h;}
   function render(){
@@ -652,7 +643,7 @@
   function setProfile(p){
     profile=p;
     curAlph = ALPH;
-    N = (p==="emma") ? emmaN : curAlph.length;   // Emma scores over her word bank (size N from the slider); typers over 26 letters
+    N = (p==="emma") ? emmaWords.length : curAlph.length;   // Emma scores over her 150-word bank; typers over 26 letters
     Array.prototype.forEach.call(document.querySelectorAll(".prof"), function(b){ b.classList.toggle("sel", b.getAttribute("data-prof")===p); });
     if(p==="emma"){ enumMics(); loadVosk(); startMicTest(); } else { stopMicTest(); }   // mic check runs automatically
     sendProfile(); refreshGate();
@@ -706,20 +697,15 @@
 
   // ---------- Emma: voice input — forced choice over a bank of spoken words (closest bank word to what was said) ----------
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, recWanted=false, sessLetters=0;
-  // Emma's symbols ARE words, shown in the box and read aloud (no mental mapping). The bank (assets/wordbank.js) is 3000
-  // common words, each easy and fast to say (one or two syllables, enough acoustic mass) and clearly recognizable, in the
-  // fox / alpha style, ordered by greedy maximum-minimum phonetic distance (each next word is the one most acoustically
-  // unlike everything already chosen). The size slider sweeps N from 26 to 3000; the active bank is always the first N
-  // words, so they are the most mutually-distinct N available, and that bank IS the recognizer grammar (forced choice).
-  // As N grows the words pack closer and accuracy falls. Bigger N buys log2(N-1) bits per word; the slider finds the knee.
+  // Emma's symbols ARE words, shown in the box and read aloud (no mental mapping). The bank (assets/wordbank.js) is 150
+  // common, easy-to-say words, each one or two syllables with enough acoustic mass and clearly recognizable (fox / alpha
+  // style), filtered to real, common words and picked for mutual acoustic distinctness (greedy maximum-minimum phonetic
+  // distance) so the recognizer rarely confuses two. The whole bank is the grammar (forced choice); N = 150, scored with
+  // log2(149) exactly the same way a typist's 26 letters are scored with log2(25).
   var WB_FALLBACK=["ant","book","cat","dog","egg","fish","gun","horse","ice","jet","kite","leaf","moon","nose","ox",
     "pot","quit","rope","snake","tooth","up","van","wolf","box","yarn","zoo"];
-  var WORDBANK_FULL=(window.WORDBANK_FULL&&window.WORDBANK_FULL.length>=26)?window.WORDBANK_FULL:WB_FALLBACK;
-  var emmaN=26, emmaWords=WORDBANK_FULL.slice(0,emmaN), bankSet=Object.create(null);
-  function rebuildBank(){ bankSet=Object.create(null); for(var i=0;i<emmaWords.length;i++) bankSet[emmaWords[i]]=1; }
-  rebuildBank();
-  function setEmmaN(n){ n=Math.max(26,Math.min(WORDBANK_FULL.length,n|0)); emmaN=n; emmaWords=WORDBANK_FULL.slice(0,n);
-    rebuildBank(); if(profile==="emma") N=n; var v=$("nval"); if(v) v.textContent=n; }
+  var emmaWords=(window.WORDBANK_FULL&&window.WORDBANK_FULL.length>=26)?window.WORDBANK_FULL.slice():WB_FALLBACK.slice();
+  var bankSet=Object.create(null); for(var _bi=0;_bi<emmaWords.length;_bi++) bankSet[emmaWords[_bi]]=1;
   function _sim(a,b){                                 // 0..1 string similarity (normalised edit distance)
     var la=a.length, lb=b.length; if(!la||!lb) return 0;
     var prev=[], cur=[], i, j; for(j=0;j<=lb;j++) prev[j]=j;
@@ -939,11 +925,6 @@
   $("readyBtn").addEventListener("click", doReady);
   function doKick(){ post({t:"kick"}); }
   ["kick1","kick2"].forEach(function(id){ var b=$(id); if(b) b.addEventListener("click", doKick); });
-  (function(){ var ns=$("nslider"); if(!ns) return;                 // word-bank size slider (Emma benchmark)
-    ns.max=Math.max(3000, WORDBANK_FULL.length);                    // keep the benchmark range at 26..3000
-    ns.addEventListener("input", function(){ setEmmaN(parseInt(this.value,10)); });
-    ns.addEventListener("change", function(){ if(you) sendProfile(); });   // tell the server the new N on release
-  })();
   function onKicked(){ stopRec(); try{ if(es) es.close(); }catch(e){} $("kickedOverlay").classList.add("on"); }
   function chooseSolo(bps){ soloBps=bps; aud(); sendProfile(); post({t:"solo", bps:bps}); }
   Array.prototype.forEach.call(document.querySelectorAll(".btn.solo"), function(b){
