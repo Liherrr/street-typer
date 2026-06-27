@@ -168,6 +168,19 @@ def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex,
     scale = (ch * char_h) / ref_h
     base_y = int(ch * baseline)
 
+    # Keep the fighter at full size, but don't let an extreme outlier pose (e.g. a victory weapon
+    # raise that towers over the idle height) get clipped at the top: cap the scale so the
+    # 92nd-percentile-tall frame still fits under a small top margin. This leaves the normal
+    # standing/attack frames untouched and only reins in a rare hero pose. Feet stay on baseline.
+    import math
+    top_margin = max(2, int(ch * 0.012))
+    hs = sorted(f.height for _, _, f in plan)
+    p92 = hs[min(len(hs) - 1, int(math.ceil(0.92 * len(hs))) - 1)]
+    fit_scale = (base_y - top_margin) / p92
+    if fit_scale < scale:
+        print("  (scale capped %.3f -> %.3f so tall poses aren't clipped at the top)" % (scale, fit_scale))
+        scale = fit_scale
+
     counts = {}
     for state, idx, fig in plan:
         w, h = max(1, round(fig.width * scale)), max(1, round(fig.height * scale))
