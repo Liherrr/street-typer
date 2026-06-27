@@ -37,6 +37,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+BUILD = str(int(time.time()))          # per-process token; clients append ?v=BUILD to cache-bust frames on each (re)deploy
 DEFAULT_PORT = 8770
 DISC_PORT = 8771
 DISC_MAGIC = b"BITRATE_BRAWL_DISCOVER"
@@ -359,7 +360,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_error(404)
         self.send_response(200)
         self.send_header("Content-Type", ctype)
-        self._nocache()
+        if ext == ".png":
+            # cache frames so img-swaps are instant (no per-frame refetch over the network);
+            # the client appends ?v=BUILD so a redeploy busts the cache.
+            self.send_header("Cache-Control", "public, max-age=86400")
+        else:
+            self._nocache()
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -411,7 +417,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             port = self.server.server_address[1]
             urls = ["http://%s:%d/" % (ip, port) for ip in all_ipv4()]
-            self._sse({"t": "welcome", "you": pid, "hpMax": HP_MAX, "n": N,
+            self._sse({"t": "welcome", "you": pid, "hpMax": HP_MAX, "n": N, "build": BUILD,
                        "lanUrl": urls[0], "lanUrls": urls})
             if pid is None:
                 self._sse({"t": "full"})

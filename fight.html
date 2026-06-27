@@ -129,8 +129,14 @@
   .overlay{position:fixed; inset:0; background:rgba(6,9,15,.86); backdrop-filter:blur(2px); display:none; align-items:center; justify-content:center; z-index:50}
   .overlay.on{display:flex}
   #cdOverlay{background:transparent; backdrop-filter:none}   /* see the entrance animation behind the 3-2-1 */
-  .count{font-family:var(--mono); font-size:clamp(72px,18vw,150px); font-weight:740; color:var(--lamp); text-align:center;
-    text-shadow:3px 3px 0 #7c2d12,-2px 0 #7c2d12,2px 0 #7c2d12,0 -2px #7c2d12,0 0 40px rgba(255,178,77,.65)}
+  .count{font-family:var(--sans); font-weight:900; font-style:italic; font-size:clamp(80px,19vw,165px); color:var(--lamp); text-align:center; letter-spacing:.01em;
+    text-shadow:4px 4px 0 #7c2d12,-2px 0 #7c2d12,2px 0 #7c2d12,0 -2px #7c2d12,0 0 44px rgba(255,178,77,.7)}
+  .count.pop{animation:countpop .85s cubic-bezier(.2,1.5,.3,1) both}
+  @keyframes countpop{0%{opacity:0;transform:scale(2.4)}22%{opacity:1;transform:scale(1)}82%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.85)}}
+  .count.fight{color:#ff3b2e;
+    text-shadow:4px 4px 0 #5a1414,-2px 0 #7c0a0a,2px 0 #7c0a0a,0 -2px #7c0a0a,0 0 60px rgba(255,80,40,.8)}
+  .count.fight.pop{animation:fightpop 1.1s cubic-bezier(.2,1.6,.3,1) both}
+  @keyframes fightpop{0%{opacity:0;transform:scale(.3) rotate(-7deg)}38%{opacity:1;transform:scale(1.3) rotate(2deg)}100%{opacity:1;transform:scale(1.12)}}
   .card{width:min(94vw,640px); background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:26px 28px; text-align:center}
   .winner{font-family:var(--mono); font-weight:820; font-size:clamp(34px,8vw,58px); margin:0 0 4px}
   .vs{display:grid; grid-template-columns:1fr auto 1fr; gap:12px; align-items:stretch; margin:18px 0 6px}
@@ -307,6 +313,7 @@
   // ---------- character sprites (filmed frames; falls back to the emoji fighters) ----------
   var useSprites=false, sprites={f1:null,f2:null}, lastSpr=0, pendingIntro=false;
   var PLAYFPS=50;   // playback rate (5x the old 10): with 5x-denser frame sets, animations play at the same speed but much smoother. Set in code, not the manifest.
+  var build="";     // per-deploy token from the server; appended as ?v= to frame URLs so the browser caches them (instant swaps) yet refreshes on a redeploy
   function pad2(i){ return i<10?"0"+i:""+i; }
   function Sprite(el, dir, man){
     this.el=el; this.dir=dir; this.man=man; this.fps=PLAYFPS;   // playback rate is fixed in code, regardless of the manifest's fps field
@@ -317,7 +324,7 @@
   Sprite.prototype.seq=function(state){
     var s=this.man.states[state]; if(!s) return null;
     var ext=this.man.ext||"png", out=[];
-    for(var i=1;i<=s.count;i++) out.push(this.dir+"/"+state+"_"+pad2(i)+"."+ext);
+    for(var i=1;i<=s.count;i++) out.push(this.dir+"/"+state+"_"+pad2(i)+"."+ext+(build?"?v="+build:""));
     return {urls:out, loop:!!s.loop, fps:s.fps||this.fps};
   };
   Sprite.prototype.play=function(state){
@@ -330,7 +337,7 @@
   Sprite.prototype.tick=function(dt){
     if(!this.cur) return;
     this.acc+=dt;
-    var slow=(this.state==="idle"||this.state==="intro"||this.state==="win"||this.state==="lose")?2:1;
+    var slow=(this.state==="idle")?10:((this.state==="intro"||this.state==="win"||this.state==="lose")?2:1);
     var spf=slow/this.cur.fps;   // idle/intro/win/lose play at half speed; attacks and hurt stay at normal speed
     while(this.acc>=spf){
       this.acc-=spf;
@@ -364,7 +371,7 @@
   function startTick(){ if(tickTimer) return; lastSpr=0; tickTimer=setInterval(spriteTick, 16); }   // ~60Hz tick (enough to drive 50fps); setInterval, not rAF, so it never pauses when the tab/window is hidden
   function playIntro(){ if(useSprites && sprites.f1 && sprites.f2){ pendingIntro=false; sprites.f1.intro(); sprites.f2.intro(); } }
   function preload(urls){ return Promise.all(urls.map(function(u){ return new Promise(function(res,rej){ var im=new Image(); im.onload=res; im.onerror=rej; im.src=u; }); })); }
-  function preloadAll(dir,man){ for(var st in man.states){ var s=man.states[st],ext=man.ext||"png"; for(var i=1;i<=s.count;i++){ (new Image()).src=dir+"/"+st+"_"+pad2(i)+"."+ext; } } }
+  function preloadAll(dir,man){ for(var st in man.states){ var s=man.states[st],ext=man.ext||"png"; for(var i=1;i<=s.count;i++){ (new Image()).src=dir+"/"+st+"_"+pad2(i)+"."+ext+(build?"?v="+build:""); } } }
   var charsInit=false;
   function loadCharacters(){
     if(you!==1 && you!==2) return;
@@ -375,7 +382,8 @@
                   fetch(rDir+"/manifest.json").then(function(r){return r.json();}) ])
       .then(function(ms){
         var lm=ms[0], rm=ms[1];
-        return preload([lDir+"/idle_01."+(lm.ext||"png"), rDir+"/idle_01."+(rm.ext||"png")]).then(function(){
+        var vq=(build?"?v="+build:"");
+        return preload([lDir+"/idle_01."+(lm.ext||"png")+vq, rDir+"/idle_01."+(rm.ext||"png")+vq]).then(function(){
           sprites.f1=new Sprite($("f1"), lDir, lm);
           sprites.f2=new Sprite($("f2"), rDir, rm);
           useSprites=true; startTick(); if(pendingIntro) playIntro();
@@ -398,7 +406,7 @@
   function handle(ev){
     switch(ev.t){
       case "welcome":
-        you=ev.you; hpMax=ev.hpMax||1200; N=ev.n||26;
+        you=ev.you; hpMax=ev.hpMax||1200; N=ev.n||26; build=ev.build||"";
         if(you===null){ $("lobStatus").textContent="The arena is full (2 players already fighting)."; return; }
         $("younm").textContent = you===1?"PLAYER 1 (you)":"PLAYER 2 (you)";
         $("oppnm").textContent = you===1?"PLAYER 2":"PLAYER 1";
@@ -437,11 +445,14 @@
     $("koText").className="kotext";                              // clear any leftover result text
     pendingIntro=true; playIntro();                             // entrance now, or as soon as the sprites finish loading
     cdOverlay.classList.add("on"); var steps=["3","2","1"]; aud();
-    steps.forEach(function(s,k){setTimeout(function(){cdNum.textContent=s;},k*900);});
-    setTimeout(function(){cdNum.textContent="FIGHT!";},steps.length*900);
+    function cdBeat(txt,fight){ cdNum.textContent=txt; cdNum.classList.toggle("fight",!!fight);
+      cdNum.classList.remove("pop"); void cdNum.offsetWidth; cdNum.classList.add("pop"); }
+    steps.forEach(function(s,k){setTimeout(function(){cdBeat(s,false);},k*900);});
+    setTimeout(function(){cdBeat("FIGHT!",true);},steps.length*900);
   }
   function beginFight(ev){
-    cdOverlay.classList.remove("on"); hp=ev.hp||hp; running=true; ended=false; startMs=performance.now();
+    setTimeout(function(){ cdOverlay.classList.remove("on"); cdNum.className="count"; }, 550);   // let the FIGHT! banner linger a beat into the round
+    hp=ev.hp||hp; running=true; ended=false; startMs=performance.now();
     setHP(); rafId=requestAnimationFrame(loop);
   }
   function loop(){
