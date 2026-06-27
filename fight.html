@@ -51,7 +51,7 @@
 
   /* arena */
   #arena{position:relative}
-  .topbar{display:flex; align-items:center; gap:12px; margin-bottom:8px}
+  .topbar{display:flex; align-items:center; gap:12px; margin:0 auto 8px; max-width:820px}
   .fighterbar{flex:1; min-width:0}
   .namerow{display:flex; justify-content:space-between; font-family:var(--mono); font-size:12px; letter-spacing:.08em; margin-bottom:4px}
   .namerow .nm{font-weight:700} .you .nm{color:var(--you)} .opp .nm{color:var(--opp)}
@@ -66,15 +66,16 @@
     text-shadow:2px 2px 0 #7c2d12, 0 0 16px rgba(255,138,30,.5)}
   .clock small{display:block;font-size:10px;color:var(--dim);letter-spacing:.14em;font-weight:600}
 
-  .ring{position:relative; height:clamp(200px,34vh,300px); border:2px solid #3d2e7a; border-radius:14px; overflow:hidden;
+  .ring{position:relative; width:min(94vw,820px); aspect-ratio:648/368; max-height:62vh; margin:0 auto 10px;
+    border:2px solid #3d2e7a; border-radius:14px; overflow:hidden;
     background:#cfc9a6 url("assets/background.gif") center bottom / cover no-repeat; image-rendering:pixelated;
-    margin-bottom:10px; box-shadow:inset 0 0 46px rgba(0,0,0,.4)}
+    box-shadow:inset 0 0 46px rgba(0,0,0,.4)}
   .ground{position:absolute; left:0; right:0; bottom:0; height:34%;
     background:linear-gradient(180deg,rgba(255,170,60,.18),rgba(120,60,20,.05) 60%,rgba(0,0,0,0));
     border-top:1px solid rgba(255,200,120,.18)}
   .fighter{position:absolute; bottom:8%; font-size:clamp(54px,9vw,84px); filter:drop-shadow(0 9px 8px rgba(0,0,0,.55)); transition:transform .12s}
-  .fighter .spr{display:block; height:clamp(120px,24vh,205px); width:auto; image-rendering:auto}
-  .fighter.left{left:28%} .fighter.right{right:28%}   /* sprite frames are 640 wide (extra room for the broom); 28% keeps the fighters facing off without overlap */
+  .fighter .spr{display:block; height:calc(min(94vw,820px) / 3.67); width:auto; image-rendering:auto}   /* ~48% of the arena height, tied to the ring width */
+  .fighter.left{left:21%} .fighter.right{right:21%}   /* 640-wide frames; 21% in the centered 820px arena = close, weapons nearly meeting */
   #ring.flip .spr{transform:scaleX(-1)}   /* P2 viewpoint: the two fighters were filmed facing opposite ways, so mirror the drawing (not the motion) */
   .fighter.hurt{animation:hurt .3s ease}
   @keyframes hurt{0%,100%{filter:drop-shadow(0 6px 10px rgba(0,0,0,.5))} 20%{filter:drop-shadow(0 0 14px #ff6b6b) brightness(1.8)} 30%{transform:translateX(-8px)} 60%{transform:translateX(4px)}}
@@ -87,7 +88,7 @@
   @keyframes shake{0%,100%{transform:translate(0,0)}25%{transform:translate(-5px,2px)}50%{transform:translate(4px,-3px)}75%{transform:translate(-3px,-1px)}}
 
   /* sheet */
-  .stage{position:relative; border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#0b1322,#0a0f1a);
+  .stage{position:relative; max-width:820px; margin:0 auto; border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#0b1322,#0a0f1a);
     padding:22px 18px 16px; overflow:hidden}
   .flash{position:absolute; inset:0; pointer-events:none; opacity:0; background:radial-gradient(circle at 50% 60%, rgba(86,227,201,.16), transparent 70%)}
   .flash.bad{background:radial-gradient(circle at 50% 60%, rgba(255,107,107,.22), transparent 70%)}
