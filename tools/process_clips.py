@@ -210,10 +210,11 @@ def body_height(fig):
 
 
 def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex, face, fps, model="u2net",
-            recover="none", picks_override=None, body_h=0.78, frame_mult=1):
+            recover="none", picks_override=None, body_h=0.78, frame_mult=1, ranges=None):
     from PIL import Image
     import numpy as np
     picks_override = picks_override or {}
+    ranges = ranges or {}
     cw, ch = canvas
     out_dir = os.path.join(ROOT, "characters", char)
     os.makedirs(out_dir, exist_ok=True)
@@ -228,6 +229,9 @@ def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex,
         n = (frames_override or count) * frame_mult
         with tempfile.TemporaryDirectory() as tmp:
             allframes = extract_frames(clip, tmp)
+            if state in ranges:                             # restrict sampling to a sub-range of the clip
+                s, e = ranges[state]                        # (e.g. one take held two attacks)
+                allframes = allframes[s:e + 1]
             if state in picks_override:                     # hand-picked frame indices for this state
                 idxs = picks_override[state]
                 picks = [allframes[min(max(i, 0), len(allframes) - 1)] for i in idxs]
@@ -318,6 +322,9 @@ def main():
                     help="override frame selection for a state when even sampling lands on a bad "
                          "frame, e.g. --picks attack2=0,14,33,44,57 (0-based indices into the "
                          "extracted frames; count must match the state's frame count)")
+    ap.add_argument("--range", action="append", default=[], dest="ranges",
+                    help="sample a state only from a source frame sub-range, e.g. --range attack4=0:52 "
+                         "(0-based, inclusive). Use when one clip holds two takes/attacks.")
     ap.add_argument("--key", default="", help="chroma key color hex (e.g. 00ff00) for --matte green")
     ap.add_argument("--face", default="right", choices=["right", "left"], help="direction filmed (mirrored to face right)")
     ap.add_argument("--fps", type=int, default=10)
@@ -329,11 +336,16 @@ def main():
     for spec in a.picks:
         st, _, idxs = spec.partition("=")
         picks_override[st.strip()] = [int(x) for x in idxs.split(",") if x.strip() != ""]
+    ranges = {}
+    for spec in a.ranges:
+        st, _, rng = spec.partition("=")
+        s, _, e = rng.partition(":")
+        ranges[st.strip()] = (int(s), int(e))
     print("processing %s from %s (matte=%s, model=%s, recover=%s, face=%s%s)" %
           (a.char, a.raw_dir, a.matte, a.rembg_model, a.recover, a.face,
            ", picks=" + str(picks_override) if picks_override else ""))
     process(a.raw_dir, a.char, a.frames, (cw, ch), a.char_height, a.baseline, a.matte, a.key, a.face, a.fps,
-            a.rembg_model, a.recover, picks_override, a.body_height, a.frame_mult)
+            a.rembg_model, a.recover, picks_override, a.body_height, a.frame_mult, ranges)
 
 
 if __name__ == "__main__":
