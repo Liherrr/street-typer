@@ -258,13 +258,12 @@
         </div>
       </div>
       <div class="mictest" id="mictest" hidden>
-        <div class="mthead">Voice mode needs a working microphone. Test it before you ready up.</div>
+        <div class="mthead">Voice mode needs a working microphone. Say a few letters to check it.</div>
         <div class="mtrow">
           <select class="micsel" id="micsel"></select>
-          <button class="micbtn" id="micTestBtn">Start mic test</button>
         </div>
         <div class="meter"><div class="meterfill" id="meterfill"></div><div class="thr" style="left:24%"></div></div>
-        <div class="mtstat" id="mtstat">pick a microphone, press Start, then say a few letters out loud</div>
+        <div class="mtstat" id="mtstat">checking your microphone, say a few letters out loud</div>
         <div class="mtnote" id="voskstat">the offline voice model loads in the background when you pick Emma</div>
       </div>
       <div class="seats">
@@ -627,7 +626,7 @@
     curAlph = (p==="emma") ? EMMA_ALPH : ALPH;
     N = curAlph.length;
     Array.prototype.forEach.call(document.querySelectorAll(".prof"), function(b){ b.classList.toggle("sel", b.getAttribute("data-prof")===p); });
-    if(p==="emma"){ enumMics(); loadVosk(); } else { stopMicTest(); }
+    if(p==="emma"){ enumMics(); loadVosk(); startMicTest(); } else { stopMicTest(); }   // mic check runs automatically
     sendProfile(); refreshGate();
   }
   Array.prototype.forEach.call(document.querySelectorAll(".prof"), function(b){
@@ -835,12 +834,11 @@
         micRAF=requestAnimationFrame(loop);
       })();
     }).catch(function(err){
-      setMtStat((err&&err.name==="NotAllowedError") ? "microphone blocked — allow it in the browser, then retry" : "couldn't open that microphone — pick another and retry","warn");
+      setMtStat((err&&err.name==="NotAllowedError") ? "microphone blocked. Allow it in your browser, then reload." : "couldn't open that microphone. Pick another from the list.","warn");
     });
   }
   (function bindMicTest(){
-    var b=$("micTestBtn"); if(b) b.addEventListener("click", startMicTest);
-    var sel=$("micsel"); if(sel) sel.addEventListener("change", function(){ if(micStream) startMicTest(); });
+    var sel=$("micsel"); if(sel) sel.addEventListener("change", startMicTest);   // switching mic re-runs the check
     if(navigator.mediaDevices && navigator.mediaDevices.addEventListener){ try{ navigator.mediaDevices.addEventListener("devicechange", enumMics); }catch(e){} }
   })();
   function setHP(){
