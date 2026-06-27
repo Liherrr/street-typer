@@ -10,6 +10,10 @@ __pycache__/
 debug_run.jsonl
 *.log
 
+# Local QA outputs from tools/qa.py (not part of the repo)
+_samples/
+qa_*.png
+
 # OS cruft
 .DS_Store
 Thumbs.db
