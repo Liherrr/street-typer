@@ -91,7 +91,7 @@ Competition raises `B` for the same pair of hands. Performance climbs with arous
 
 ## How it works
 
-- It takes two players: both open the same page, each presses Ready, and only then does the 60-second round begin. A single player waits in the lobby.
+- It takes two players on two separate devices, each with a physical keyboard (one player per device, because a browser can't tell two keyboards on one machine apart). Both open the same page, each presses Ready, and only then does the 60-second round begin. A single player waits in the lobby.
 - N = 26 letters, drawn i.i.d. uniform with replacement. No language model, no patterns.
 - Each completed four-letter block is an attack; damage is `log2(25) × (correct − wrong)`.
 - The server is the authoritative referee for HP, score, and winner. Browsers send keystroke results and draw the fight. A round runs 60 seconds; the first to 0 HP wins, otherwise the higher HP at the buzzer takes it.
@@ -100,7 +100,7 @@ Competition raises `B` for the same pair of hands. Performance climbs with arous
 
 ## Run it
 
-Two players, one shared URL. Deploy it as a web service (Render's free tier works) and both players open the same link: the first becomes Player 1, the second Player 2. The round begins only when both players are on the page and each presses Ready. The start command is `python fight_server.py --cloud`. Full steps are in **[DEPLOY.md](DEPLOY.md)**. To play on a local network instead, run `python fight_server.py` (or use the double-click launchers) and the second machine discovers the first automatically.
+Two players, one shared URL. Deploy it as a web service (Render's free tier works) and both players open the same link: the first becomes Player 1, the second Player 2. The round begins only when both players are on the page and each presses Ready. The start command is `python fight_server.py --cloud`. Full steps are in **[DEPLOY.md](DEPLOY.md)**. To play on a local network instead, run `python fight_server.py` (or use the double-click launchers) and the second machine discovers the first automatically. Any device with a physical keyboard works, including a tablet with an attached keyboard (Bluetooth, USB, or a folio keyboard).
 
 ## Custom fighters
 
