@@ -281,7 +281,7 @@
         <div class="mtstat" id="mtstat">checking your microphone, say a few letters out loud</div>
         <div class="mtnote" id="voskstat">the offline voice model loads in the background when you pick Emma</div>
         <div class="nrow">
-          <div>Word-bank size N <span class="nhint">&middot; benchmark: all one-syllable, added most-distinct first, so only confusability changes with N (26 = the curated set)</span></div>
+          <div>Word-bank size N <span class="nhint">&middot; benchmark: common, easy-to-say words (fox / alpha style), added most-distinct first; higher N packs them closer</span></div>
           <div class="nctl"><input type="range" id="nslider" min="26" max="3000" step="1" value="26"><output id="nval">26</output></div>
         </div>
       </div>
@@ -706,12 +706,12 @@
 
   // ---------- Emma: voice input — forced choice over a bank of spoken words (closest bank word to what was said) ----------
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, recWanted=false, sessLetters=0;
-  // Emma's symbols ARE words, shown in the box and read aloud (no mental mapping). The bank (assets/wordbank.js) is one
-  // ordered list: the 26 curated monosyllables first, then common, all-one-syllable words ordered by greedy maximum-minimum
-  // phonetic distance (each next word is the one most acoustically unlike everything already chosen). The size slider sweeps
-  // N from 26 upward; the active bank is always the first N words, and that bank IS the recognizer grammar (forced choice).
-  // Holding every word to one syllable keeps the speaking rate flat, so sweeping N isolates one thing: as the words pack
-  // closer, accuracy falls. Bigger N buys log2(N-1) bits per word; the slider shows where that stops paying for it.
+  // Emma's symbols ARE words, shown in the box and read aloud (no mental mapping). The bank (assets/wordbank.js) is 3000
+  // common words, each easy and fast to say (one or two syllables, enough acoustic mass) and clearly recognizable, in the
+  // fox / alpha style, ordered by greedy maximum-minimum phonetic distance (each next word is the one most acoustically
+  // unlike everything already chosen). The size slider sweeps N from 26 to 3000; the active bank is always the first N
+  // words, so they are the most mutually-distinct N available, and that bank IS the recognizer grammar (forced choice).
+  // As N grows the words pack closer and accuracy falls. Bigger N buys log2(N-1) bits per word; the slider finds the knee.
   var WB_FALLBACK=["ant","book","cat","dog","egg","fish","gun","horse","ice","jet","kite","leaf","moon","nose","ox",
     "pot","quit","rope","snake","tooth","up","van","wolf","box","yarn","zoo"];
   var WORDBANK_FULL=(window.WORDBANK_FULL&&window.WORDBANK_FULL.length>=26)?window.WORDBANK_FULL:WB_FALLBACK;
@@ -940,7 +940,7 @@
   function doKick(){ post({t:"kick"}); }
   ["kick1","kick2"].forEach(function(id){ var b=$(id); if(b) b.addEventListener("click", doKick); });
   (function(){ var ns=$("nslider"); if(!ns) return;                 // word-bank size slider (Emma benchmark)
-    ns.max=WORDBANK_FULL.length;                                     // range follows the actual bank size
+    ns.max=Math.max(3000, WORDBANK_FULL.length);                    // keep the benchmark range at 26..3000
     ns.addEventListener("input", function(){ setEmmaN(parseInt(this.value,10)); });
     ns.addEventListener("change", function(){ if(you) sendProfile(); });   // tell the server the new N on release
   })();
