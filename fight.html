@@ -208,10 +208,11 @@
   .kbd .krow{display:flex; gap:7px; justify-content:center}
   .kbd .key{position:relative; font-family:var(--mono); font-size:18px; font-weight:700; color:#aeb8c9; width:clamp(28px,4.6vw,46px); height:48px;
     display:flex; align-items:center; justify-content:center; background:#0e1626; border:1px solid var(--line); border-radius:9px; text-transform:uppercase}
-  /* the next key is marked by an arrow ABOVE it, not by lighting the key (a fill pulls at peripheral vision) */
+  .kbd .key.lit{color:#0c1018; background:linear-gradient(180deg,var(--lamp-core),var(--lamp)); border-color:var(--lamp); box-shadow:0 0 14px 1px rgba(255,178,77,.5)}   /* current key lights up */
+  /* the NEXT key (after the current) gets a teal arrow above it, so Elizabeth can read ahead */
   .kbd .key .point{position:absolute; left:50%; top:-17px; transform:translateX(-50%); width:0; height:0;
-    border-left:8px solid transparent; border-right:8px solid transparent; border-top:12px solid var(--lamp); opacity:0; transition:opacity .08s}
-  .kbd .key.next .point{opacity:1; filter:drop-shadow(0 0 5px rgba(255,178,77,.55))}
+    border-left:8px solid transparent; border-right:8px solid transparent; border-top:12px solid #56e3c9; opacity:0; transition:opacity .08s}
+  .kbd .key.next .point{opacity:1; filter:drop-shadow(0 0 5px rgba(86,227,201,.6))}
   /* Emma: voice status bar */
   .voicebar{display:flex; align-items:center; gap:9px; justify-content:center; font-family:var(--mono); font-size:12px; color:#9aa6ba; margin-top:10px}
   .voicebar[hidden]{display:none}
@@ -640,7 +641,7 @@
     $("hint").textContent = voice
       ? "speak the highlighted letters out loud; every 4 lands an attack worth your hits minus your mistakes"
       : (profile==="elizabeth"
-          ? "type the highlighted letters — the keyboard shows the next key; every 4 lands an attack"
+          ? "type the highlighted letters; the keyboard lights the current key and points an arrow at the next. Every 4 lands an attack"
           : "type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes");
     if(voice){ $("heard").textContent=""; startRec(); } else { stopRec(); }
     updateKbd();
@@ -655,8 +656,11 @@
   })();
   function updateKbd(){
     if(profile!=="elizabeth") return;
-    var tgt=seq[idx], keys=$("kbd").querySelectorAll(".key");
-    for(var i=0;i<keys.length;i++){ keys[i].classList.toggle("next", keys[i].getAttribute("data-k")===tgt); }   // arrow on the next key, no fill
+    var cur=seq[idx], nxt=seq[idx+1], keys=$("kbd").querySelectorAll(".key");
+    for(var i=0;i<keys.length;i++){ var k=keys[i].getAttribute("data-k");
+      keys[i].classList.toggle("lit", k===cur);      // current key lights up
+      keys[i].classList.toggle("next", k===nxt);     // arrow points to the next key
+    }
   }
 
   // ---------- Emma: voice input via the browser speech recognizer ----------
