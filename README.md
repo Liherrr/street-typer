@@ -74,6 +74,8 @@ Rate comes from the same automaticity. On random letters, which deny typists the
 
 Multiply it out: `4.64 bits/sel × 3-6 /s × ≈0.95 ≈ 13-26 bits/second`, comfortably past the 8 bits per second speech ceiling. A casual but accurate typist already measures 10 to 15; a fast one runs well above 25. Reading keeps up easily, since the eyes pull in the next letters through the fastest input channel a person has.
 
+The keyboard has to be physical, not an on-screen phone keyboard, for the same reason: more of the body is in play. A full keyboard spreads the work across up to ten fingers with real key travel, where a phone leans on one or two thumbs. The gap is large and measured. In a study of 37,000 typists, mobile input averaged about 36 words per minute against roughly 52 on a physical keyboard, and the number of fingers tracked the speed directly: two thumbs beat two index fingers, which beat a single finger (Palin et al. 2019; Dhakal et al. 2018). More fingers and more movement raise `R`, and a higher `R` raises `B`.
+
 ## Design choices behind the measurement
 
 - A maximal `N`. All 26 letters, each fully distinguishable by an exact keypress, so `log2(N − 1)` counts bits the channel actually carries.
@@ -121,6 +123,16 @@ The game is built for two people, but if you are on your own you can spar with a
 
 The computer "types" at the rate you choose, with a little variation in pace so it is not a metronome, and the rules are the same as a real match: you win by transmitting faster than it does. The difficulty doubles as a concrete bits-per-second target to train against. This is an optional add-on; the real game is the two-player duel.
 
+## Player profiles (optional twists)
+
+The same match can be played three ways, picked in the lobby before you ready up. These are optional accommodations for different players; the default is the two-player keyboard duel.
+
+- **Calvin** types the full 26 letters. The classic mode, unchanged.
+- **Elizabeth** types the same letters with an on-screen keyboard under the box that lights up the next key, a visible cue for a player who values a guided interface.
+- **Emma** speaks the letters instead of typing them, for a player whose hand-eye coordination makes the keyboard hard. The browser's speech recognizer listens continuously and matches each spoken letter as it lands.
+
+Emma's mode also shrinks the alphabet, because spoken letters are far more confusable than printed ones. The worst offender is the E-set (B, C, D, E, G, P, T, V, Z): nine letters that all rhyme on a long "e" and that both people and recognizers routinely mix up (Loizou and Spanias 1996). The nasals (M, N), the fricatives (F, S), and pairs like I/Y and Q/U overlap the same way. So Emma's set keeps one clear representative per sound group, **A E F I K L M O R U W X**, twelve letters that stay distinct over a microphone. To keep the recognition honest it favors precision: an ambiguous sound is treated as a miss she can repeat, never a wrong letter. Her score then uses `log2(N − 1)` for her twelve letters, so her bits are measured fairly against a 26-letter opponent. Voice mode needs a microphone and runs in Chrome or Edge.
+
 ## Custom fighters
 
 Each character is a folder of transparent frame images plus a `manifest.json`, with the states `intro`, `idle`, `attack1` through `attack4`, `hurt`, `win`, and `lose`. Drop in your own filmed, step-printed frames and they appear with no code change. The filming guide, the processing pipeline, and the acceptance criteria are in **[PROCESSING.md](PROCESSING.md)**.
@@ -140,5 +152,7 @@ Each character is a folder of transparent frame images plus a `manifest.json`, w
 - Dunn-Rankin, P. (1968). *The similarity of lower-case letters of the English alphabet.* J. Verbal Learning and Verbal Behavior 7(6).
 - Dhakal, V., Feit, A. M., Kristensson, P. O., & Oulasvirta, A. (2018). *Observations on typing from 136 million keystrokes.* CHI 2018.
 - Grudin, J. T. (1983). *Error patterns in novice and skilled transcription typing.* In Cognitive Aspects of Skilled Typewriting.
+- Palin, K., Feit, A. M., Kim, S., Kristensson, P. O., & Oulasvirta, A. (2019). *How do people type on mobile devices? Observations from a study with 37,000 volunteers.* MobileHCI 2019.
+- Loizou, P. C., & Spanias, A. S. (1996). *High-performance alphabet recognition.* IEEE Transactions on Speech and Audio Processing 4(6).
 
 MIT licensed. See [LICENSE](LICENSE).

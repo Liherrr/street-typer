@@ -164,6 +164,7 @@ class Match:
         self.winner = None
         self.timer = None
         self.bot = None                # solo mode: {"pid": <bot seat>, "bps": <target>}, else None
+        self.npc = {1: N, 2: N}        # alphabet size per player (a profile can shrink it); drives that player's bits
 
     # ---- membership (token-keyed so a brief EventSource reconnect reclaims the SAME slot) ----
     def join(self, token):
@@ -214,9 +215,12 @@ class Match:
         for pid in list(self.clients):
             self._put(pid, ev)
 
+    def bpc(self, pid):
+        return math.log2(max(2, self.npc[pid]) - 1)    # bits per correct selection for this player's alphabet
+
     def hp(self):
-        return {1: max(0, round(HP_MAX - BIT_PER_CHAR * self.peak[2])),   # p1 HP hurt by p2's damage
-                2: max(0, round(HP_MAX - BIT_PER_CHAR * self.peak[1]))}
+        return {1: max(0, round(HP_MAX - self.bpc(2) * self.peak[2])),   # p1 HP hurt by p2's damage
+                2: max(0, round(HP_MAX - self.bpc(1) * self.peak[1]))}
 
     def _present(self, pid):
         # a seat counts as present if a real client holds it, or the computer occupies it (solo)
@@ -227,6 +231,12 @@ class Match:
                          "ready": self.ready, "hpMax": HP_MAX, "n": N, "state": self.state})
 
     # ---- actions ----
+    def set_profile(self, pid, n):
+        # the client reports its alphabet size (Calvin/Elizabeth = 26, Emma's spoken set is smaller)
+        with self.lock:
+            if pid in (1, 2):
+                self.npc[pid] = max(2, min(N, int(n)))
+
     def set_ready(self, pid, val):
         with self.lock:
             if self.state != "lobby":
@@ -276,17 +286,18 @@ class Match:
                     return
                 time.sleep(0.05)
 
-    def attack(self, pid, correct, wrong, kind):
+    def attack(self, pid, correct, wrong, kind, n=N):
         with self.lock:
             if self.state != "fight":
                 return
+            self.npc[pid] = max(2, min(N, int(n)))
             correct = max(0, int(correct)); wrong = max(0, int(wrong))
             self.sc[pid] += correct
             self.si[pid] += wrong
             self.net[pid] += correct - wrong
             if self.net[pid] > self.peak[pid]:
                 self.peak[pid] = self.net[pid]
-            dmg = round(BIT_PER_CHAR * max(0, correct - wrong))
+            dmg = round(self.bpc(pid) * max(0, correct - wrong))
             hp = self.hp()
             other = 2 if pid == 1 else 1
             self._broadcast({"t": "hit", "by": pid, "on": other, "dmg": dmg,
@@ -319,9 +330,9 @@ class Match:
         el = max(1e-6, min(el, DURATION))
         stats = {}
         for pid in (1, 2):
-            b = BIT_PER_CHAR * max(0, self.sc[pid] - self.si[pid]) / el
+            b = self.bpc(pid) * max(0, self.sc[pid] - self.si[pid]) / el
             stats[pid] = {"sc": self.sc[pid], "si": self.si[pid], "B": round(b, 2),
-                          "dmg": round(BIT_PER_CHAR * self.peak[pid])}
+                          "dmg": round(self.bpc(pid) * self.peak[pid]), "n": self.npc[pid]}
         self._broadcast({"t": "over", "winner": winner, "reason": reason,
                          "hp": self.hp(), "stats": stats, "n": N, "elapsed": round(el, 1)})
 
@@ -465,13 +476,15 @@ class Handler(BaseHTTPRequestHandler):
             if t == "ready":
                 m.set_ready(pid, ev.get("ready", True))
             elif t == "attack":
-                m.attack(pid, ev.get("correct", 0), ev.get("wrong", 0), ev.get("kind", 0))
+                m.attack(pid, ev.get("correct", 0), ev.get("wrong", 0), ev.get("kind", 0), ev.get("n", N))
             elif t == "rematch":
                 m.rematch(pid)
             elif t == "kick":
                 m.kick(pid)
             elif t == "solo":
                 m.start_solo(pid, ev.get("bps", 10))
+            elif t == "profile":
+                m.set_profile(pid, ev.get("n", N))
         return self._json({"ok": True})
 
     def _serve_html(self):
