@@ -2,7 +2,8 @@
 
 > A two-player typing fight built to maximize the information rate a human player can achieve. The damage you deal equals the bits you transmit, so the winner is whoever moves the most information per second.
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+[![Play the game](https://img.shields.io/badge/play-street--typer.onrender.com-ff7a18.svg)](https://street-typer.onrender.com/)
+&nbsp;![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 &nbsp;![Python](https://img.shields.io/badge/Python-3.7%2B-3776AB.svg?logo=python&logoColor=white)
 &nbsp;![Dependencies: none](https://img.shields.io/badge/dependencies-none%20(stdlib)-brightgreen.svg)
 &nbsp;![Players: 2](https://img.shields.io/badge/players-2-orange.svg)
