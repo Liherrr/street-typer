@@ -309,6 +309,22 @@ class Match:
                 return
             self._reset_to_lobby()
 
+    def kick(self, by_pid):
+        # Either live player can remove the other one (e.g. a squatter who never readies up),
+        # freeing that seat so someone else can take it. The kicker keeps their own seat.
+        with self.lock:
+            if by_pid not in (1, 2) or by_pid not in self.clients:
+                return                              # only a connected player may kick
+            other = 2 if by_pid == 1 else 1
+            if self.slots[other] is None and other not in self.clients:
+                return                              # nobody in the other seat
+            self._put(other, {"t": "kicked"})       # tell them, while their outbox still exists
+            self.clients.pop(other, None)
+            self.slots[other] = None
+            self.ready[other] = False
+            self.gen[other] += 1                    # stale-out the kicked connection's slot claim
+            self._reset_to_lobby()                  # fresh lobby for whoever remains
+
 
 # ---------------------------------------------------------------- HTTP handler
 class Handler(BaseHTTPRequestHandler):
@@ -389,6 +405,8 @@ class Handler(BaseHTTPRequestHandler):
                 m.attack(pid, ev.get("correct", 0), ev.get("wrong", 0), ev.get("kind", 0))
             elif t == "rematch":
                 m.rematch(pid)
+            elif t == "kick":
+                m.kick(pid)
         return self._json({"ok": True})
 
     def _serve_html(self):
