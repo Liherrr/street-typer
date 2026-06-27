@@ -28,6 +28,9 @@
     color:#ffd23f; text-transform:uppercase;
     text-shadow:2px 0 #c2410c,-2px 0 #c2410c,0 2px #c2410c,0 -2px #c2410c,2px 2px 0 #c2410c,-2px -2px 0 #c2410c,
       4px 4px 0 #7c2d12, 0 0 36px rgba(255,138,30,.55)}
+  .ghlink{display:inline-block; font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:#aab4c6; text-decoration:none;
+    border:1px solid var(--line); border-radius:999px; padding:5px 13px; margin:0 0 16px; transition:color .15s, border-color .15s, box-shadow .15s}
+  .ghlink:hover{color:#fff; border-color:var(--lamp); box-shadow:0 0 14px rgba(255,178,77,.28)}
   .lede{color:#c3ccdb; font-size:15.5px; line-height:1.55; max-width:64ch; margin:0 0 18px}
   .btn{appearance:none; cursor:pointer; font-family:var(--sans); font-weight:650; font-size:16px; color:#0c1018;
     background:var(--lamp); border:none; border-radius:12px; padding:14px 28px; box-shadow:0 8px 24px rgba(255,178,77,.28); transition:transform .08s, box-shadow .12s}
@@ -167,11 +170,10 @@
 
   <!-- CONNECTING / LOBBY -->
   <section id="lobby" class="screen on">
+    <a class="ghlink" href="https://github.com/Liherrr/street-typer" target="_blank" rel="noopener">View the source on GitHub &#8599;</a>
     <h1 class="gametitle">STREET TYPER</h1>
-    <p class="lede">A live typing duel. Type the highlighted letters. Finishing a <b>4-letter block</b> always
-      throws an attack, and it hits for the bits you earned in that block: correct letters add, mistakes
-      subtract, and once the mistakes catch up to the hits the attack does no damage at all.
-      The match starts only when both players are on this page and ready.</p>
+    <p class="lede">A live typing duel. Type the highlighted letters. It takes two players, each on their own
+      device with a physical keyboard; the match starts once both are on this page and have pressed Ready.</p>
     <div class="lobcard">
       <div class="seats">
         <div class="seat" id="seat1"><div class="who">Player 1 (host)</div><div class="st" id="st1">—</div></div>

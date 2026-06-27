@@ -1,6 +1,6 @@
 # Street Typer
 
-> A two-player typing fight where the damage you deal equals the bits you transmit, built to test one claim: for a practiced typist, random letters on a keyboard move more information per second than speech or any other channel we measured.
+> A two-player typing fight built to maximize the information rate a human player can achieve. The damage you deal equals the bits you transmit, so the winner is whoever moves the most information per second.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 &nbsp;![Python](https://img.shields.io/badge/Python-3.7%2B-3776AB.svg?logo=python&logoColor=white)
@@ -10,11 +10,11 @@
 
 You type a stream of random letters. Every four-letter block you finish lands an attack, and its damage is the bits you transmitted in that block: your correct letters minus your mistakes, never below zero. A clean block deals the full four letters of damage, and a block with as many mistakes as correct letters deals none. Your opponent's health bar is sized so that only a sustained 20 bits per second can drain it inside a 60-second round, so the player with the higher information rate wins.
 
-Underneath the fighting game is a bit-rate meter. The rest of this document is about that meter: the quantity it measures, why typing random letters maximizes that quantity for the people who will play it, the other input methods we built and dropped, and the design choices behind the measurement.
+The rest of this document is the design rationale: the quantity the game maximizes, why typing random letters is the input that maximizes it for the people who will play, the alternatives we weighed, and the choices that follow.
 
 ## The objective
 
-Every input method gets one score: the information transfer rate it achieves.
+The game is scored by a single number: the information transfer rate the player achieves.
 
 ```
 B = log2(N − 1) · max(Sc − Si, 0) / t          [bits / second]
@@ -75,7 +75,7 @@ Multiply it out: `4.64 bits/sel × 3-6 /s × ≈0.95 ≈ 13-26 bits/second`, com
 
 ## Design choices behind the measurement
 
-- A maximal `N`. All 26 letters, each fully distinguishable, so `log2(N − 1)` reflects bits the channel carries rather than an inflated count. We do not count acoustically identical tokens as separate symbols, which would claim bits that never crossed the channel.
+- A maximal `N`. All 26 letters, each fully distinguishable by an exact keypress, so `log2(N − 1)` counts bits the channel actually carries rather than an inflated alphabet.
 - A lossless channel. Typing removes the recognizer, fixes accuracy near 1.0, and recovers the full per-selection entropy that a speech recognizer erodes.
 - An i.i.d. uniform source. Maximum entropy for a fixed `N`, with no language model or patterns inflating the score.
 - Four-letter chunks. Letters are read and struck in groups of four, which matches how typists buffer and the limits of motor chunking (Miller 1956). Chunking spreads the fixed per-action overhead and sets the attack cadence.
