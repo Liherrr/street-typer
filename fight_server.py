@@ -352,7 +352,8 @@ class Handler(BaseHTTPRequestHandler):
         ext = os.path.splitext(full)[1].lower()
         ctype = {".svg": "image/svg+xml", ".png": "image/png", ".json": "application/json",
                  ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp",
-                 ".gif": "image/gif"}.get(ext, "application/octet-stream")
+                 ".gif": "image/gif", ".mp3": "audio/mpeg", ".ogg": "audio/ogg",
+                 ".wav": "audio/wav", ".m4a": "audio/mp4"}.get(ext, "application/octet-stream")
         try:
             with open(full, "rb") as f:
                 body = f.read()
