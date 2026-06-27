@@ -100,7 +100,33 @@ def _rembg_session(model):
     return _SESSION
 
 
-def matte(img, mode, key_hex, model="u2net"):
+def _recover_red(rgba, rgb):
+    """Union a saturated-red chroma key into the matte to rescue a red held object
+    (e.g. P2's broom) that rembg drops when it is swung, motion-blurred, or raised
+    against a bright wall. Red is unique in these clips (black costume, gray wall,
+    brown floor are all excluded by the saturation gate), so this only adds the broom."""
+    import cv2
+    import numpy as np
+    from PIL import Image
+    arr = np.asarray(rgba).copy()
+    src = np.asarray(rgb.convert("RGB"))
+    hsv = cv2.cvtColor(src, cv2.COLOR_RGB2HSV)
+    h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    rm = (((h <= 12) | (h >= 168)) & (s >= 110) & (v >= 60)).astype(np.uint8)
+    # keep only sizable red components: this drops tiny floor/wall specks while preserving the
+    # broom AND its motion-blur streak on fast swings (a morphological-open would erode the streak).
+    n, lab, stats, _ = cv2.connectedComponentsWithStats(rm, 8)
+    keep = np.zeros_like(rm)
+    for i in range(1, n):
+        if stats[i, cv2.CC_STAT_AREA] >= 40:
+            keep[lab == i] = 1
+    rm = cv2.morphologyEx(keep, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)).astype(bool)  # solidify broom
+    arr[..., 3][rm] = 255
+    arr[..., :3][rm] = src[rm]
+    return Image.fromarray(arr, "RGBA")
+
+
+def matte(img, mode, key_hex, model="u2net", recover="none"):
     """Return an RGBA image with the background removed."""
     from PIL import Image
     import numpy as np
@@ -123,15 +149,20 @@ def matte(img, mode, key_hex, model="u2net"):
     # default: AI matte
     need("rembg")
     from rembg import remove
-    return remove(img, session=_rembg_session(model))
+    out = remove(img, session=_rembg_session(model))
+    if recover == "red":
+        out = _recover_red(out, img)
+    return out
 
 
 def content_bbox(img):
     return img.split()[3].getbbox()    # bbox of non-transparent alpha
 
 
-def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex, face, fps, model="u2net"):
+def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex, face, fps, model="u2net",
+            recover="none", picks_override=None):
     from PIL import Image
+    picks_override = picks_override or {}
     cw, ch = canvas
     out_dir = os.path.join(ROOT, "characters", char)
     os.makedirs(out_dir, exist_ok=True)
@@ -145,9 +176,14 @@ def process(raw, char, frames_override, canvas, char_h, baseline, mode, key_hex,
             continue
         n = frames_override or count
         with tempfile.TemporaryDirectory() as tmp:
-            picks = pick_even(extract_frames(clip, tmp), n)
+            allframes = extract_frames(clip, tmp)
+            if state in picks_override:                     # hand-picked frame indices for this state
+                idxs = picks_override[state]
+                picks = [allframes[min(max(i, 0), len(allframes) - 1)] for i in idxs]
+            else:
+                picks = pick_even(allframes, n)
             for i, fp in enumerate(picks):
-                im = matte(Image.open(fp), mode, key_hex, model)
+                im = matte(Image.open(fp), mode, key_hex, model, recover)
                 if face == "left":
                     im = im.transpose(Image.FLIP_LEFT_RIGHT)
                 bb = content_bbox(im)
@@ -218,6 +254,13 @@ def main():
     ap.add_argument("--matte", default="rembg", choices=["rembg", "green", "chroma", "none"])
     ap.add_argument("--rembg-model", default="u2net",
                     help="rembg model for --matte rembg (e.g. u2net, isnet-general-use, u2net_human_seg)")
+    ap.add_argument("--recover", default="none", choices=["none", "red"],
+                    help="rescue a held object the matte drops: 'red' chroma-keys a red weapon "
+                         "(e.g. P2's broom) back into the cutout on swung/blurred frames")
+    ap.add_argument("--picks", action="append", default=[],
+                    help="override frame selection for a state when even sampling lands on a bad "
+                         "frame, e.g. --picks attack2=0,14,33,44,57 (0-based indices into the "
+                         "extracted frames; count must match the state's frame count)")
     ap.add_argument("--key", default="", help="chroma key color hex (e.g. 00ff00) for --matte green")
     ap.add_argument("--face", default="right", choices=["right", "left"], help="direction filmed (mirrored to face right)")
     ap.add_argument("--fps", type=int, default=10)
@@ -225,9 +268,15 @@ def main():
     if not os.path.isdir(a.raw_dir):
         die("raw_dir not found: " + a.raw_dir)
     cw, ch = (int(x) for x in a.canvas.lower().split("x"))
-    print("processing %s from %s (matte=%s, model=%s, face=%s)" % (a.char, a.raw_dir, a.matte, a.rembg_model, a.face))
+    picks_override = {}
+    for spec in a.picks:
+        st, _, idxs = spec.partition("=")
+        picks_override[st.strip()] = [int(x) for x in idxs.split(",") if x.strip() != ""]
+    print("processing %s from %s (matte=%s, model=%s, recover=%s, face=%s%s)" %
+          (a.char, a.raw_dir, a.matte, a.rembg_model, a.recover, a.face,
+           ", picks=" + str(picks_override) if picks_override else ""))
     process(a.raw_dir, a.char, a.frames, (cw, ch), a.char_height, a.baseline, a.matte, a.key, a.face, a.fps,
-            a.rembg_model)
+            a.rembg_model, a.recover, picks_override)
 
 
 if __name__ == "__main__":
