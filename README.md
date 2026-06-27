@@ -75,7 +75,7 @@ Multiply it out: `4.64 bits/sel × 3-6 /s × ≈0.95 ≈ 13-26 bits/second`, com
 
 ## Design choices behind the measurement
 
-- A maximal `N`. All 26 letters, each fully distinguishable by an exact keypress, so `log2(N − 1)` counts bits the channel actually carries rather than an inflated alphabet.
+- A maximal `N`. All 26 letters, each fully distinguishable by an exact keypress, so `log2(N − 1)` counts bits the channel actually carries.
 - A lossless channel. Typing removes the recognizer, fixes accuracy near 1.0, and recovers the full per-selection entropy that a speech recognizer erodes.
 - An i.i.d. uniform source. Maximum entropy for a fixed `N`, with no language model or patterns inflating the score.
 - Four-letter chunks. Letters are read and struck in groups of four, which matches how typists buffer and the limits of motor chunking (Miller 1956). Chunking spreads the fixed per-action overhead and sets the attack cadence.
