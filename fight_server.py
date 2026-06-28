@@ -13,10 +13,12 @@ How two testers connect with zero fuss:
     other player opens that URL.
 
 Referee rules (server is authoritative):
-  - N = 26 letters, i.i.d. uniform.  Each completed 4-letter block fires an attack (correct or not).
-  - damage = log2(N-1) * (correct - wrong) accumulated; an opponent's HP = HP_MAX - your best
-    cumulative bit-score.  HP_MAX = 20 bps * 60 s = 1200 bit-damage, so ONLY a ~20 bps run can KO.
-  - First to drop the opponent to 0 wins; at 60 s the higher remaining HP wins.
+  - Targets are i.i.d. uniform over a per-player alphabet of size N (26 letters for the keyboard
+    profiles, 150 spoken words for the voice profile).  Each completed block fires an attack.
+  - damage = log2(N-1) * (correct - wrong) accumulated (the achieved-bit-rate formula); an
+    opponent's HP = HP_MAX - your best cumulative bit-score.  HP_MAX = 20 bps * 60 s = 1200.
+  - The round always runs the full 60 s; maxing the damage bar does not end it early.  At 60 s the
+    higher remaining HP wins.
 
 Endpoints:
   GET  /                 -> fight.html
@@ -156,7 +158,7 @@ class Match:
         self.slots = {1: None, 2: None}  # pid -> owner token (survives brief reconnects)
         self.gen = {1: 0, 2: 0}        # bumped each (re)connection, to ignore stale disconnects
         self.ready = {1: False, 2: False}
-        self.bnet = {1: 0.0, 2: 0.0}   # running net BITS (flat = bpc*(correct-wrong); Emma sends her surprisal bits)
+        self.bnet = {1: 0.0, 2: 0.0}   # running net BITS = bpc(pid) * (correct - wrong), accumulated
         self.bpeak = {1: 0.0, 2: 0.0}  # best cumulative net bits so far -> drives damage (no healing)
         self.sc = {1: 0, 2: 0}
         self.si = {1: 0, 2: 0}
@@ -287,7 +289,7 @@ class Match:
                     return
                 time.sleep(0.05)
 
-    def attack(self, pid, correct, wrong, kind, n=N, bits=None):
+    def attack(self, pid, correct, wrong, kind, n=N):
         with self.lock:
             if self.state != "fight":
                 return
@@ -295,8 +297,8 @@ class Match:
             correct = max(0, int(correct)); wrong = max(0, int(wrong))
             self.sc[pid] += correct
             self.si[pid] += wrong
-            # block damage in bits: a client-supplied surprisal sum (Emma) or the flat bpc * net
-            block = float(bits) if bits is not None else self.bpc(pid) * (correct - wrong)
+            # block damage in bits: log2(N-1) per correct selection, minus the misses (the achieved-bit-rate formula)
+            block = self.bpc(pid) * (correct - wrong)
             self.bnet[pid] += block
             if self.bnet[pid] > self.bpeak[pid]:
                 self.bpeak[pid] = self.bnet[pid]
@@ -306,8 +308,7 @@ class Match:
             self._broadcast({"t": "hit", "by": pid, "on": other, "dmg": dmg,
                              "kind": int(kind) % 5, "hp": hp,
                              "combo": None})
-            if hp[other] <= 0:
-                self._finish(winner=pid, reason="K.O.")
+            # the timed evaluation always runs the full DURATION; maxing the bar does not end it early
 
     def _on_timeout(self):
         with self.lock:
@@ -487,7 +488,7 @@ class Handler(BaseHTTPRequestHandler):
             if t == "ready":
                 m.set_ready(pid, ev.get("ready", True))
             elif t == "attack":
-                m.attack(pid, ev.get("correct", 0), ev.get("wrong", 0), ev.get("kind", 0), ev.get("n", N), ev.get("bits"))
+                m.attack(pid, ev.get("correct", 0), ev.get("wrong", 0), ev.get("kind", 0), ev.get("n", N))
             elif t == "rematch":
                 m.rematch(pid)
             elif t == "kick":

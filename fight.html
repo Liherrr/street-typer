@@ -129,7 +129,6 @@
   .line.above{opacity:.34} .line.below{opacity:.85}
   .ch{display:inline-block; color:var(--yel)}
   .ch.gap{margin-left:.66em}
-  .ch.subgap{margin-left:.3em}   /* Calvin's 5-block reads as 3+2 so it holds as two chunks, not five raw items */
   .ch.done{color:var(--done)} .ch.bad{color:var(--bad)}
   .ch.cur{color:#0c1018; background:linear-gradient(180deg,var(--lamp-core),var(--lamp)); border-radius:8px; box-shadow:0 0 18px 2px rgba(255,178,77,.45)}
   /* Emma: the same stream, but a read-and-say word per letter instead of the bare character */
@@ -213,16 +212,12 @@
     box-shadow:0 0 0 1px var(--lamp) inset, 0 0 16px rgba(255,178,77,.18)}
   .prof.sel .pd{color:#ffd23f}
   /* Elizabeth: drawn keyboard cue under the letters */
-  .kbd{display:flex; flex-direction:column; gap:7px; align-items:center; margin:20px 0 4px; position:relative}
+  .kbd{display:flex; flex-direction:column; gap:7px; align-items:center; margin:20px 0 4px}
   .kbd[hidden]{display:none}
   .kbd .krow{display:flex; gap:7px; justify-content:center}
   .kbd .key{position:relative; font-family:var(--mono); font-size:18px; font-weight:700; color:#aeb8c9; width:clamp(28px,4.6vw,46px); height:48px;
     display:flex; align-items:center; justify-content:center; background:#0e1626; border:1px solid var(--line); border-radius:9px; text-transform:uppercase}
   .kbd .key.lit{color:#0c1018; background:linear-gradient(180deg,var(--lamp-core),var(--lamp)); border-color:var(--lamp); box-shadow:0 0 14px 1px rgba(255,178,77,.5)}   /* current key lights up */
-  /* a teal arrow drawn FROM the current lit key TO the next key, so Elizabeth sees which way to move */
-  .kbarrow{position:absolute; left:0; top:0; pointer-events:none; overflow:visible; z-index:2}
-  .kbarrowline{stroke:#56e3c9; stroke-width:3; stroke-linecap:round; filter:drop-shadow(0 0 4px rgba(86,227,201,.55))}
-  .kbarrowhead{fill:#56e3c9; filter:drop-shadow(0 0 4px rgba(86,227,201,.55))}
   /* Emma: voice status bar */
   .voicebar{display:flex; align-items:center; gap:9px; justify-content:center; font-family:var(--mono); font-size:12px; color:#9aa6ba; margin-top:10px}
   .voicebar[hidden]{display:none}
@@ -231,8 +226,6 @@
   @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.4}}
   .voicebar .vraw{font-style:italic; color:#6b7686; max-width:13em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
   .voicebar .heard{font-weight:800; color:#ffd23f; text-transform:uppercase; min-width:2.6em; text-align:left}
-  .voicebar .ghost{margin-left:auto; padding-left:12px; color:#6b7686; font-style:italic}   /* the predictor's live guess */
-  .voicebar .ghost.caught{color:#ff6b6b; font-style:normal; font-weight:700}   /* it anticipated this word: cheap */
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
   .mictest[hidden]{display:none}
@@ -328,7 +321,7 @@
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
       </div>
       <div class="hint" id="hint">type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes</div>
-      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span><span class="ghost" id="ghost"></span></div>
+      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span></div>
     </div>
   </section>
 </div>
@@ -370,7 +363,8 @@
   var sheet=$("sheet"), fx=$("fx"), stage=$("stage"), flash=$("flash"), ring=$("ring");
   var lobby=$("lobby"), arena=$("arena"), cdOverlay=$("cdOverlay"), cdNum=$("cdNum"), endOverlay=$("endOverlay");
   function log2(x){return Math.log(x)/Math.LN2;}
-  function bpc(){return log2(N-1);}            // 4.64 bits per correct letter
+  function curN(){return profile==="emma"?emmaWords.length:N;}   // this player's alphabet size (150 spoken words, else 26 letters)
+  function bpc(){return log2(curN()-1);}       // bits per correct selection: log2(25) for letters, log2(149) for words
   function rm(el){if(el&&el.parentNode)el.parentNode.removeChild(el);}
   function show(id){["lobby","arena"].forEach(function(s){$(s).classList.toggle("on",s===id);});}
 
@@ -403,8 +397,8 @@
   // ---------- sequence + render ----------
   function randCh(){ if(profile==="emma") return emmaWords[(Math.random()*emmaWords.length)|0]; return curAlph[(Math.random()*curAlph.length)|0]; }
   function ensureBuf(){while(seq.length<idx+2*ROWLEN+2)seq.push(randCh());}
-  function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;bestCombo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;lastSpoken=null;predReset();ensureBuf();}
-  function buildRow(start,isCur){var h="";for(var c=0;c<ROWLEN;c++){var i=start+c,cls="ch"+(c>0&&c%GROUP===0?" gap":(GROUP===5&&c%5===3?" subgap":"")),ch="&nbsp;";
+  function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;bestCombo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;ensureBuf();}
+  function buildRow(start,isCur){var h="";for(var c=0;c<ROWLEN;c++){var i=start+c,cls="ch"+(c>0&&c%GROUP===0?" gap":""),ch="&nbsp;";
     if(i>=0&&seq[i]!=null){ch=seq[i];if(i<idx)cls+=(res[i]==="ok"?" done":" bad");else if(isCur&&i===idx)cls+=" cur";}
     h+='<span class="'+cls+'">'+ch+'</span>';}return h;}
   var WROW=4;                                         // Emma's word sheet: 4 words per row, two rows (no block clustering)
@@ -415,7 +409,6 @@
     if(profile==="emma"){var ws=Math.floor(idx/WROW)*WROW;        // words instead of letters: read-and-say each one
       sheet.innerHTML='<div class="wline cur">'+buildWordRow(ws,true)+'</div>'+
         '<div class="wline below">'+buildWordRow(ws+WROW,false)+'</div>';
-      var gw=ghostWord(), ge=$("ghost"); if(ge){ var hit=(gw===seq[idx]); ge.textContent="🔮 "+gw+(hit?" — called it":""); ge.classList.toggle("caught", hit); }   // the predictor's current best guess
       updateKbd();return;}
     var rs=Math.floor(idx/ROWLEN)*ROWLEN;
     sheet.innerHTML='<div class="line cur">'+buildRow(rs,true)+'</div>'+
@@ -613,30 +606,26 @@
   function beginFight(ev){
     cdOverlay.classList.remove("on"); cdNum.className="count";   // FIGHT! disappears exactly when the round begins (input unlocks here)
     hp=ev.hp||hp; running=true; ended=false; startMs=performance.now();
-    setHP(); render(); rafId=requestAnimationFrame(loop);   // re-render once play is live so Elizabeth hears the first letter
+    setHP(); render(); rafId=requestAnimationFrame(loop);   // re-render once play is live so the first target shows
   }
   function loop(){
     if(!running)return;
     var el=(performance.now()-startMs)/1000; if(el>DURATION)el=DURATION;
     $("clock").innerHTML=Math.max(0,DURATION-el).toFixed(0)+"<small>SECONDS</small>";
-    var B=(profile==="emma"?Math.max(bitAcc,0):bpc()*Math.max(sc-si,0))/Math.max(el,1e-6); $("hRate").textContent=B.toFixed(2);
+    var B=bpc()*Math.max(sc-si,0)/Math.max(el,1e-6); $("hRate").textContent=B.toFixed(2);
     rafId=requestAnimationFrame(loop);
   }
   function inputLetter(k){                          // one accepted selection: a keypress, or a recognized spoken letter
     if(!running||ended) return;
     if(profile==="emma" ? !bankSet[k] : curAlph.indexOf(k)===-1) return;   // ignore anything outside the active pool
     var t=seq[idx], ok=(k===t);
-    var s = (profile==="emma") ? surprisal(t) : 0;   // bits the predictor failed to anticipate for this word (frozen on its history)
-    if(ok){ res[idx]="ok"; sc++; combo++; if(combo>bestCombo)bestCombo=combo; blockC++; thock(combo);
-      if(profile==="emma"){ bitAcc+=s; blockBits+=s; $("heard").textContent+="  +"+s.toFixed(1); } }
-    else { res[idx]="bad"; si++; combo=0; blockW++; buzz(); flashStage(true);
-      if(profile==="emma"){ bitAcc-=s; blockBits-=s; } }
-    if(profile==="emma") predUpdate(t);              // the predictor learns the word it was just shown
+    if(ok){ res[idx]="ok"; sc++; combo++; if(combo>bestCombo)bestCombo=combo; blockC++; thock(combo); }
+    else { res[idx]="bad"; si++; combo=0; blockW++; buzz(); flashStage(true); }
     idx++; inBlock++; ensureBuf(); render();
     $("hSc").textContent=sc; $("hSi").textContent=si; $("hCombo").textContent=combo;
     if(inBlock>=GROUP){
-      post({t:"attack", correct:blockC, wrong:blockW, kind:attackKind, n:N, bits:(profile==="emma"?blockBits:undefined)});
-      attackKind=(attackKind+1)%5; blockC=0; blockW=0; inBlock=0; blockBits=0;
+      post({t:"attack", correct:blockC, wrong:blockW, kind:attackKind, n:curN()});
+      attackKind=(attackKind+1)%5; blockC=0; blockW=0; inBlock=0;
     }
   }
   function onKey(e){
@@ -648,7 +637,7 @@
   }
 
   // ---------- player profiles: Calvin (classic) / Elizabeth (guided) / Emma (voice) ----------
-  function sendProfile(){ if(you) post({t:"profile", n:N}); }   // tell the server our alphabet size, for honest bits
+  function sendProfile(){ if(you) post({t:"profile", n:curN()}); }   // tell the server our alphabet size, for honest bits
   function setProfile(p){
     profile=p;
     curAlph = ALPH;
@@ -662,16 +651,14 @@
   });
   function setupProfileUI(){                         // arrange the arena for the chosen profile at round start
     stopMicTest();                                   // release the test mic so the recognizer can use it
-    GROUP  = (profile==="calvin") ? 5 : 4;           // Calvin is a fluent blind typist, so he reads and strikes in 5s; others in 4s
-    ROWLEN = (profile==="calvin") ? 25 : 24;         // keep the row about the same width (5x5 vs 4x6)
     $("kbd").hidden = (profile!=="elizabeth");
     var voice=(profile==="emma");
     $("voicebar").hidden = !voice;
     $("hint").textContent = voice
       ? "read the highlighted word out loud, just say what you see; every 4 lands an attack worth your hits minus your mistakes"
       : (profile==="elizabeth"
-          ? "type the highlighted letters; the keyboard lights the current key and speaks it, and an arrow points to the next. Every 4 lands an attack"
-          : "type the highlighted letters; every 5 lands an attack worth your hits minus your mistakes");
+          ? "type the highlighted letters; the keyboard lights the current key so you can see where to move. Every 4 lands an attack"
+          : "type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes");
     if(voice){ $("heard").textContent=""; startRec(); } else { stopRec(); }
     updateKbd();
   }
@@ -681,37 +668,12 @@
   (function buildKbd(){
     var kb=$("kbd"); if(!kb) return; var html="";
     KB_ROWS.forEach(function(row){ html+='<div class="krow">'; for(var i=0;i<row.length;i++){ html+='<div class="key" data-k="'+row[i]+'">'+row[i]+'</div>'; } html+='</div>'; });
-    kb.innerHTML=html+'<svg class="kbarrow" aria-hidden="true"></svg>';
+    kb.innerHTML=html;
   })();
-  var lastSpoken=null;
-  function speakChar(c){                              // Elizabeth: read the current letter aloud, as fast and early as possible
-    try{ var s=window.speechSynthesis; if(!s) return;
-      s.cancel();                                     // drop anything pending so the newest letter plays now, not in a queue
-      var u=new SpeechSynthesisUtterance(c); u.rate=2.4; u.lang="en-US"; s.speak(u);
-    }catch(e){}
-  }
   function updateKbd(){
     if(profile!=="elizabeth") return;
-    var kb=$("kbd"), cur=seq[idx], nxt=seq[idx+1], keys=kb.querySelectorAll(".key");
+    var cur=seq[idx], keys=$("kbd").querySelectorAll(".key");
     for(var i=0;i<keys.length;i++){ keys[i].classList.toggle("lit", keys[i].getAttribute("data-k")===cur); }   // only the current key lights up
-    if(running && !ended && cur && cur!==lastSpoken){ speakChar(cur); lastSpoken=cur; }   // audio hint the instant she reaches a new letter
-    drawKbArrow(kb, cur, nxt);                        // an arrow from the current key to the next one
-  }
-  function drawKbArrow(kb, cur, nxt){
-    var svg=kb.querySelector(".kbarrow"); if(!svg) return;
-    var W=kb.clientWidth, H=kb.clientHeight;
-    svg.setAttribute("width",W); svg.setAttribute("height",H); svg.setAttribute("viewBox","0 0 "+W+" "+H);
-    if(!cur||!nxt||cur===nxt){ svg.innerHTML=""; return; }   // no move to show
-    var base=kb.getBoundingClientRect();
-    function center(k){ var el=kb.querySelector('.key[data-k="'+k+'"]'); if(!el) return null; var r=el.getBoundingClientRect(); return {x:r.left-base.left+r.width/2, y:r.top-base.top+r.height/2}; }
-    var a=center(cur), b=center(nxt); if(!a||!b){ svg.innerHTML=""; return; }
-    var dx=b.x-a.x, dy=b.y-a.y, len=Math.sqrt(dx*dx+dy*dy)||1, ux=dx/len, uy=dy/len, px=-uy, py=ux;
-    var sx=a.x+24*ux, sy=a.y+24*uy;                   // start just outside the current key
-    var ex=b.x-22*ux, ey=b.y-22*uy;                   // tip just shy of the next key
-    var hl=11, hw=7, bx=ex-hl*ux, by=ey-hl*uy;        // arrowhead base
-    svg.innerHTML =
-      '<line class="kbarrowline" x1="'+sx.toFixed(1)+'" y1="'+sy.toFixed(1)+'" x2="'+bx.toFixed(1)+'" y2="'+by.toFixed(1)+'"/>'+
-      '<polygon class="kbarrowhead" points="'+ex.toFixed(1)+','+ey.toFixed(1)+' '+(bx+hw*px).toFixed(1)+','+(by+hw*py).toFixed(1)+' '+(bx-hw*px).toFixed(1)+','+(by-hw*py).toFixed(1)+'"/>';
   }
 
   // ---------- Emma: voice input — forced choice over a bank of spoken words (closest bank word to what was said) ----------
@@ -724,18 +686,8 @@
   var WB_FALLBACK=["ant","book","cat","dog","egg","fish","gun","horse","ice","jet","kite","leaf","moon","nose","ox",
     "pot","quit","rope","snake","tooth","up","van","wolf","box","yarn","zoo"];
   var emmaWords=(window.WORDBANK_FULL&&window.WORDBANK_FULL.length>=26)?window.WORDBANK_FULL.slice():WB_FALLBACK.slice();
-  var bankSet=Object.create(null), wordIdx=Object.create(null);
-  for(var _bi=0;_bi<emmaWords.length;_bi++){ bankSet[emmaWords[_bi]]=1; wordIdx[emmaWords[_bi]]=_bi; }
-  // THE PREDICTOR (Emma's information-theory mechanic). A Krichevsky-Trofimov model learns the distribution of the words
-  // Emma is shown, and each word is priced by its surprisal to that model, s = -log2(p_hat), clamped to [3,9] bits. This
-  // is Shannon's 1951 guessing experiment turned into the score: a word is worth exactly the bits the predictor failed to
-  // anticipate, so information IS the failure of prediction, and a uniform (maximum-entropy) source keeps every word dear.
-  var pcount, ptotal, bitAcc=0, blockBits=0;
-  function predReset(){ pcount=[]; for(var i=0;i<emmaWords.length;i++) pcount[i]=0.5; ptotal=0.5*emmaWords.length; bitAcc=0; blockBits=0; }
-  predReset();
-  function surprisal(w){ var i=wordIdx[w]; if(i==null) return 7; return Math.max(3, Math.min(9, -Math.log2(pcount[i]/ptotal))); }
-  function predUpdate(w){ var i=wordIdx[w]; if(i!=null){ pcount[i]+=1; ptotal+=1; } }
-  function ghostWord(){ var bi=0,bv=-1; for(var i=0;i<pcount.length;i++){ if(pcount[i]>bv){ bv=pcount[i]; bi=i; } } return emmaWords[bi]; }
+  var bankSet=Object.create(null);
+  for(var _bi=0;_bi<emmaWords.length;_bi++){ bankSet[emmaWords[_bi]]=1; }
   function _sim(a,b){                                 // 0..1 string similarity (normalised edit distance)
     var la=a.length, lb=b.length; if(!la||!lb) return 0;
     var prev=[], cur=[], i, j; for(j=0;j<=lb;j++) prev[j]=j;
