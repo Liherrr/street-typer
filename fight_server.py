@@ -12,9 +12,10 @@ How two testers connect with zero fuss:
   - Fallback if the network blocks UDP discovery: the host screen shows a join URL + QR code; the
     other player opens that URL.
 
-Referee rules (server is authoritative):
+Referee rules (the browser scores keystrokes; the server runs the clock and the match):
   - Targets are i.i.d. uniform over a per-player alphabet of size N (26 letters for the keyboard
-    profiles, 150 spoken words for the voice profile).  Each completed block fires an attack.
+    profiles, 150 spoken words for the voice profile).  The browser draws them and scores each
+    selection; each completed block fires an attack that reports its correct/wrong counts.
   - damage = log2(N-1) * (correct - wrong) accumulated (the achieved-bit-rate formula); an
     opponent's HP = HP_MAX - your best cumulative bit-score.  HP_MAX = 20 bps * 60 s = 1200.
   - The round always runs the full 60 s; maxing the damage bar does not end it early.  At 60 s the
@@ -150,7 +151,7 @@ def start_host_responder(port):
 
 # ---------------------------------------------------------------- the match (referee)
 class Match:
-    """One fight between up to two players. Server is authoritative for HP, score and the winner."""
+    """One fight between up to two players. The server runs the clock and referees HP and the winner from each browser's reported block results."""
 
     def __init__(self):
         self.lock = threading.RLock()
