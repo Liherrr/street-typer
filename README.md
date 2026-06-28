@@ -19,25 +19,21 @@ The game maximizes the achieved bit rate the assignment defines:
 B = log2(N − 1) · max(Sc − Si, 0) / t       [bits / second]
 ```
 
-`N` is the alphabet size; `Sc` and `Si` are the correct and incorrect selections in `t` seconds. A selection drawn uniformly from `N` options carries up to `log2 N` bits (Shannon 1948); the `N − 1` is a conservative shave for an error-correction key, and the `max(·, 0)` floor makes an error forfeit a selection's worth of credit. The formula factors into the only three quantities a player controls:
+`N` is the alphabet size; `Sc` and `Si` are the correct and incorrect selections in `t` seconds. A selection drawn uniformly from `N` options carries up to `log2 N` bits (Shannon 1948); the `N − 1` is a conservative shave for an error-correction key, and the `max(·, 0)` floor makes an error forfeit a selection's worth of credit. Reading the formula gives three levers, and a good design pushes all of them at once:
 
-```
-B = log2(N − 1) · R · (2a − 1),   R = (Sc + Si) / t,   a = Sc / (Sc + Si)
-```
+- the bits per selection, `log2(N − 1)`, which grows only with the log of `N`, so a wider alphabet pays slowly;
+- the rate, how many selections you make per second, set by how fast the effector can act;
+- the accuracy, how many of them land in `Sc`. An error is doubly costly, since it both misses `Sc` and adds to `Si`, so accuracy below about 0.9 falls off fast.
 
-- `log2(N − 1)`, the bits per selection, grows with the log of `N`, so a wider alphabet pays slowly.
-- `R`, the selections per second, is set by how fast the effector can act.
-- `2a − 1`, the share of information that survives, is linear in accuracy with slope 2, since an error both forfeits its credit and is subtracted, so accuracy below about 0.9 falls off fast.
-
-The three trade against each other, so the design has to push all of them at once.
+These three trade against each other, so the best design sits high on all of them for the player at hand.
 
 ## Input modality
 
-A round is a stream of selections, and reading each target is near-instant, so output is the bottleneck. Which output channel carries the most bits is then a per-player question, since `R` and `a` in `B = log2(N − 1) · R · (2a − 1)` come from the effector. The game offers two: a physical keyboard by default, and a voice mode.
+A round is a stream of selections, and reading each target is near-instant, so output is the bottleneck. Which output channel carries the most bits is then a per-player question, since the rate and accuracy come from the effector. The game offers two: a physical keyboard by default, and a voice mode.
 
 For anyone who types daily, the keyboard is the obvious default: an overlearned motor program where the keypress is the symbol, so the full `log2 N` bits survive at near-perfect accuracy. The choice costs almost no time, since Hick-Hyman reaction time grows only for unfamiliar mappings (Hick 1952; Hyman 1953), and rate is set by finger transport (Fitts 1954), spread across ten fingers on a physical board where a phone has only one or two thumbs (Palin et al. 2019; Dhakal et al. 2018). A fluent typist lands around 13 to 26 bits per second.
 
-The keyboard assumes hands that cooperate, which is itself a player-specific bet. For a player with worse-than-average hand-eye coordination, it costs in exactly `R` and `a`, slower keying and more slips, so a voice mode can do better. An i.i.d. stream is harder to recognize than natural speech, which leans on language context the random sequence removes (Coupé et al. 2019), so I worked through spoken digits, letter-names, NATO codes, and several word banks before settling on a pool of 150 acoustically distinct common words that read back most cleanly. That pool is Emma's voice alphabet, `N = 150`, built and scored in the Player modes section below.
+The keyboard assumes hands that cooperate, which is itself a player-specific bet. For a player with worse-than-average hand-eye coordination, both the rate and the accuracy fall, slower keying and more slips, so a voice mode can do better. An i.i.d. stream is harder to recognize than natural speech, which leans on language context the random sequence removes (Coupé et al. 2019), so I worked through spoken digits, letter-names, NATO codes, and several word banks before settling on a pool of 150 acoustically distinct common words that read back most cleanly. That pool is Emma's voice alphabet, `N = 150`, built and scored in the Player modes section below.
 
 ## Alphabet size: N = 26
 
@@ -48,7 +44,7 @@ The keyboard fixes the natural alphabet at 26 letters, and the arithmetic says t
 - **An i.i.d. uniform source.** Targets are drawn uniformly with replacement, with no patterns and no language model, so the sequence has no exploitable statistics and every selection carries its full entropy.
 - **Four-letter blocks.** Grouping the stream into chunks is the standard way to work within a limited span (Miller 1956); four is small enough to hold at a glance, large enough to amortize the per-action overhead, and it sets the attack cadence.
 - **A live readout and a fixed window.** The bit rate updates every frame, and a single 60-second round reports the final `B`, `N`, `Sc`, and `Si`.
-- **A two-player fight.** Damage is bits: a block deals `log2 25 × max(correct − wrong, 0)`, HP is `1200 = 20 b/s × 60 s`, and the round always runs the full minute, so the only way to win is to maximize `B`. Competition raises `B` for the same hands, since arousal lifts performance up to a point (Yerkes-Dodson 1908) and a clear goal with instant feedback sustains the attention and flow (Csikszentmihalyi 1990) that lift `R` and suppress errors. A solo mode against a paced bot (about 6, 10, or 14 b/s) gives a target to train against when no opponent is around.
+- **A two-player fight.** Damage is bits: a block deals `log2 25 × max(correct − wrong, 0)`, HP is `1200 = 20 b/s × 60 s`, and the round always runs the full minute, so the only way to win is to maximize `B`. Competition raises `B` for the same hands, since arousal lifts performance up to a point (Yerkes-Dodson 1908) and a clear goal with instant feedback sustains the attention and flow (Csikszentmihalyi 1990) that lift the rate and suppress errors. A solo mode against a paced bot (about 6, 10, or 14 b/s) gives a target to train against when no opponent is around.
 
 ## Player modes
 
