@@ -156,8 +156,8 @@ class Match:
         self.slots = {1: None, 2: None}  # pid -> owner token (survives brief reconnects)
         self.gen = {1: 0, 2: 0}        # bumped each (re)connection, to ignore stale disconnects
         self.ready = {1: False, 2: False}
-        self.net = {1: 0.0, 2: 0.0}    # running (correct - wrong)
-        self.peak = {1: 0.0, 2: 0.0}   # best cumulative net so far -> drives damage (no healing)
+        self.bnet = {1: 0.0, 2: 0.0}   # running net BITS (flat = bpc*(correct-wrong); Emma sends her surprisal bits)
+        self.bpeak = {1: 0.0, 2: 0.0}  # best cumulative net bits so far -> drives damage (no healing)
         self.sc = {1: 0, 2: 0}
         self.si = {1: 0, 2: 0}
         self.state = "lobby"           # lobby -> countdown -> fight -> over
@@ -220,8 +220,8 @@ class Match:
         return math.log2(max(2, self.npc[pid]) - 1)    # bits per correct selection for this player's alphabet
 
     def hp(self):
-        return {1: max(0, round(HP_MAX - self.bpc(2) * self.peak[2])),   # p1 HP hurt by p2's damage
-                2: max(0, round(HP_MAX - self.bpc(1) * self.peak[1]))}
+        return {1: max(0, round(HP_MAX - self.bpeak[2])),   # p1 HP hurt by p2's damage (bit-score)
+                2: max(0, round(HP_MAX - self.bpeak[1]))}
 
     def _present(self, pid):
         # a seat counts as present if a real client holds it, or the computer occupies it (solo)
@@ -287,7 +287,7 @@ class Match:
                     return
                 time.sleep(0.05)
 
-    def attack(self, pid, correct, wrong, kind, n=N):
+    def attack(self, pid, correct, wrong, kind, n=N, bits=None):
         with self.lock:
             if self.state != "fight":
                 return
@@ -295,10 +295,12 @@ class Match:
             correct = max(0, int(correct)); wrong = max(0, int(wrong))
             self.sc[pid] += correct
             self.si[pid] += wrong
-            self.net[pid] += correct - wrong
-            if self.net[pid] > self.peak[pid]:
-                self.peak[pid] = self.net[pid]
-            dmg = round(self.bpc(pid) * max(0, correct - wrong))
+            # block damage in bits: a client-supplied surprisal sum (Emma) or the flat bpc * net
+            block = float(bits) if bits is not None else self.bpc(pid) * (correct - wrong)
+            self.bnet[pid] += block
+            if self.bnet[pid] > self.bpeak[pid]:
+                self.bpeak[pid] = self.bnet[pid]
+            dmg = round(max(0.0, block))
             hp = self.hp()
             other = 2 if pid == 1 else 1
             self._broadcast({"t": "hit", "by": pid, "on": other, "dmg": dmg,
@@ -331,9 +333,9 @@ class Match:
         el = max(1e-6, min(el, DURATION))
         stats = {}
         for pid in (1, 2):
-            b = self.bpc(pid) * max(0, self.sc[pid] - self.si[pid]) / el
+            b = max(0.0, self.bnet[pid]) / el
             stats[pid] = {"sc": self.sc[pid], "si": self.si[pid], "B": round(b, 2),
-                          "dmg": round(self.bpc(pid) * self.peak[pid]), "n": self.npc[pid]}
+                          "dmg": round(self.bpeak[pid]), "n": self.npc[pid]}
         self._broadcast({"t": "over", "winner": winner, "reason": reason,
                          "hp": self.hp(), "stats": stats, "n": N, "elapsed": round(el, 1)})
 
@@ -341,7 +343,7 @@ class Match:
         # reset the round but keep connected players; caller must hold self.lock
         self._clear_bot()
         self.ready = {1: False, 2: False}
-        self.net = {1: 0.0, 2: 0.0}; self.peak = {1: 0.0, 2: 0.0}
+        self.bnet = {1: 0.0, 2: 0.0}; self.bpeak = {1: 0.0, 2: 0.0}
         self.sc = {1: 0, 2: 0}; self.si = {1: 0, 2: 0}; self.npc = {1: N, 2: N}   # clear per-player alphabets between rounds
         self.state = "lobby"; self.start_time = None; self.winner = None
         if self.timer:
@@ -485,7 +487,7 @@ class Handler(BaseHTTPRequestHandler):
             if t == "ready":
                 m.set_ready(pid, ev.get("ready", True))
             elif t == "attack":
-                m.attack(pid, ev.get("correct", 0), ev.get("wrong", 0), ev.get("kind", 0), ev.get("n", N))
+                m.attack(pid, ev.get("correct", 0), ev.get("wrong", 0), ev.get("kind", 0), ev.get("n", N), ev.get("bits"))
             elif t == "rematch":
                 m.rematch(pid)
             elif t == "kick":

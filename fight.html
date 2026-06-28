@@ -231,7 +231,8 @@
   @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.4}}
   .voicebar .vraw{font-style:italic; color:#6b7686; max-width:13em; overflow:hidden; white-space:nowrap; text-overflow:ellipsis}
   .voicebar .heard{font-weight:800; color:#ffd23f; text-transform:uppercase; min-width:2.6em; text-align:left}
-  .voicebar .ebits{margin-left:auto; padding-left:12px; color:#56e3c9; font-weight:700; letter-spacing:.02em}   /* Emma: live information-theory readout */
+  .voicebar .ghost{margin-left:auto; padding-left:12px; color:#6b7686; font-style:italic}   /* the predictor's live guess */
+  .voicebar .ghost.caught{color:#ff6b6b; font-style:normal; font-weight:700}   /* it anticipated this word: cheap */
   /* Emma: microphone test (device picker + live volume) — gates Ready until the mic works */
   .mictest{margin:0 0 16px; padding:13px 15px; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--lamp); border-radius:10px}
   .mictest[hidden]{display:none}
@@ -327,7 +328,7 @@
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
       </div>
       <div class="hint" id="hint">type the highlighted letters; every 4 letters lands an attack worth your hits minus your mistakes</div>
-      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span><span class="ebits" id="ebits"></span></div>
+      <div class="voicebar" id="voicebar" hidden><span class="micdot"></span><span id="voicestat">starting microphone&hellip;</span><span class="vraw" id="voiceraw"></span><span class="heard" id="heard"></span><span class="ghost" id="ghost"></span></div>
     </div>
   </section>
 </div>
@@ -402,7 +403,7 @@
   // ---------- sequence + render ----------
   function randCh(){ if(profile==="emma") return emmaWords[(Math.random()*emmaWords.length)|0]; return curAlph[(Math.random()*curAlph.length)|0]; }
   function ensureBuf(){while(seq.length<idx+2*ROWLEN+2)seq.push(randCh());}
-  function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;bestCombo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;lastSpoken=null;ensureBuf();}
+  function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;bestCombo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;lastSpoken=null;predReset();ensureBuf();}
   function buildRow(start,isCur){var h="";for(var c=0;c<ROWLEN;c++){var i=start+c,cls="ch"+(c>0&&c%GROUP===0?" gap":(GROUP===5&&c%5===3?" subgap":"")),ch="&nbsp;";
     if(i>=0&&seq[i]!=null){ch=seq[i];if(i<idx)cls+=(res[i]==="ok"?" done":" bad");else if(isCur&&i===idx)cls+=" cur";}
     h+='<span class="'+cls+'">'+ch+'</span>';}return h;}
@@ -414,7 +415,7 @@
     if(profile==="emma"){var ws=Math.floor(idx/WROW)*WROW;        // words instead of letters: read-and-say each one
       sheet.innerHTML='<div class="wline cur">'+buildWordRow(ws,true)+'</div>'+
         '<div class="wline below">'+buildWordRow(ws+WROW,false)+'</div>';
-      var eb=$("ebits"); if(eb){ var bw=bpc(); eb.textContent=bw.toFixed(2)+" bits/word · "+Math.round(sc*bw)+" sent"; }   // information theory for Emma
+      var gw=ghostWord(), ge=$("ghost"); if(ge){ var hit=(gw===seq[idx]); ge.textContent="🔮 "+gw+(hit?" — called it":""); ge.classList.toggle("caught", hit); }   // the predictor's current best guess
       updateKbd();return;}
     var rs=Math.floor(idx/ROWLEN)*ROWLEN;
     sheet.innerHTML='<div class="line cur">'+buildRow(rs,true)+'</div>'+
@@ -618,21 +619,24 @@
     if(!running)return;
     var el=(performance.now()-startMs)/1000; if(el>DURATION)el=DURATION;
     $("clock").innerHTML=Math.max(0,DURATION-el).toFixed(0)+"<small>SECONDS</small>";
-    var B=bpc()*Math.max(sc-si,0)/Math.max(el,1e-6); $("hRate").textContent=B.toFixed(2);
+    var B=(profile==="emma"?Math.max(bitAcc,0):bpc()*Math.max(sc-si,0))/Math.max(el,1e-6); $("hRate").textContent=B.toFixed(2);
     rafId=requestAnimationFrame(loop);
   }
   function inputLetter(k){                          // one accepted selection: a keypress, or a recognized spoken letter
     if(!running||ended) return;
     if(profile==="emma" ? !bankSet[k] : curAlph.indexOf(k)===-1) return;   // ignore anything outside the active pool
     var t=seq[idx], ok=(k===t);
+    var s = (profile==="emma") ? surprisal(t) : 0;   // bits the predictor failed to anticipate for this word (frozen on its history)
     if(ok){ res[idx]="ok"; sc++; combo++; if(combo>bestCombo)bestCombo=combo; blockC++; thock(combo);
-      if(profile==="emma"){ var hb=$("heard"); if(hb) hb.textContent+="  +"+bpc().toFixed(1)+" bits"; } }   // Emma: each correct word's self-information
-    else { res[idx]="bad"; si++; combo=0; blockW++; buzz(); flashStage(true); }
+      if(profile==="emma"){ bitAcc+=s; blockBits+=s; $("heard").textContent+="  +"+s.toFixed(1); } }
+    else { res[idx]="bad"; si++; combo=0; blockW++; buzz(); flashStage(true);
+      if(profile==="emma"){ bitAcc-=s; blockBits-=s; } }
+    if(profile==="emma") predUpdate(t);              // the predictor learns the word it was just shown
     idx++; inBlock++; ensureBuf(); render();
     $("hSc").textContent=sc; $("hSi").textContent=si; $("hCombo").textContent=combo;
     if(inBlock>=GROUP){
-      post({t:"attack", correct:blockC, wrong:blockW, kind:attackKind, n:N});
-      attackKind=(attackKind+1)%5; blockC=0; blockW=0; inBlock=0;
+      post({t:"attack", correct:blockC, wrong:blockW, kind:attackKind, n:N, bits:(profile==="emma"?blockBits:undefined)});
+      attackKind=(attackKind+1)%5; blockC=0; blockW=0; inBlock=0; blockBits=0;
     }
   }
   function onKey(e){
@@ -720,7 +724,18 @@
   var WB_FALLBACK=["ant","book","cat","dog","egg","fish","gun","horse","ice","jet","kite","leaf","moon","nose","ox",
     "pot","quit","rope","snake","tooth","up","van","wolf","box","yarn","zoo"];
   var emmaWords=(window.WORDBANK_FULL&&window.WORDBANK_FULL.length>=26)?window.WORDBANK_FULL.slice():WB_FALLBACK.slice();
-  var bankSet=Object.create(null); for(var _bi=0;_bi<emmaWords.length;_bi++) bankSet[emmaWords[_bi]]=1;
+  var bankSet=Object.create(null), wordIdx=Object.create(null);
+  for(var _bi=0;_bi<emmaWords.length;_bi++){ bankSet[emmaWords[_bi]]=1; wordIdx[emmaWords[_bi]]=_bi; }
+  // THE PREDICTOR (Emma's information-theory mechanic). A Krichevsky-Trofimov model learns the distribution of the words
+  // Emma is shown, and each word is priced by its surprisal to that model, s = -log2(p_hat), clamped to [3,9] bits. This
+  // is Shannon's 1951 guessing experiment turned into the score: a word is worth exactly the bits the predictor failed to
+  // anticipate, so information IS the failure of prediction, and a uniform (maximum-entropy) source keeps every word dear.
+  var pcount, ptotal, bitAcc=0, blockBits=0;
+  function predReset(){ pcount=[]; for(var i=0;i<emmaWords.length;i++) pcount[i]=0.5; ptotal=0.5*emmaWords.length; bitAcc=0; blockBits=0; }
+  predReset();
+  function surprisal(w){ var i=wordIdx[w]; if(i==null) return 7; return Math.max(3, Math.min(9, -Math.log2(pcount[i]/ptotal))); }
+  function predUpdate(w){ var i=wordIdx[w]; if(i!=null){ pcount[i]+=1; ptotal+=1; } }
+  function ghostWord(){ var bi=0,bv=-1; for(var i=0;i<pcount.length;i++){ if(pcount[i]>bv){ bv=pcount[i]; bi=i; } } return emmaWords[bi]; }
   function _sim(a,b){                                 // 0..1 string similarity (normalised edit distance)
     var la=a.length, lb=b.length; if(!la||!lb) return 0;
     var prev=[], cur=[], i, j; for(j=0;j<=lb;j++) prev[j]=j;
