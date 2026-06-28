@@ -65,6 +65,8 @@ settings automatically.
 4. Press Run, and Replit gives you a public URL.
 5. Both players open it.
 
+> Those two files are enough to play, but they leave out the bundled word bank, character art, and audio. The game still runs (it falls back to a built-in 26-word bank and the browser speech engine), just without the cosmetics and the full 150-word Emma bank. To keep everything, upload the whole folder, or use the GitHub-based Render path in Option 1.
+
 ---
 
 ## Option 3: Railway or Fly.io

@@ -33,7 +33,7 @@ The rest:
 - Length: keep clips short, 1 to 2 seconds each. The script samples evenly spaced frames from whatever
   you give it.
 
-Name the files exactly: `idle.mp4`, `attack1.mp4`, through `lose.mp4` (any video extension), one folder
+Name the files exactly: `intro.mp4`, `idle.mp4`, `attack1.mp4`, through `lose.mp4` (any video extension), one folder
 per fighter (for example `raw_p1/` and `raw_p2/`).
 
 ---

@@ -897,7 +897,7 @@
     $("byou").textContent=(sy.B||0).toFixed(2); $("subyou").textContent="Sc "+sy.sc+" · Si "+sy.si;
     $("bopp").textContent=(so.B||0).toFixed(2); $("subopp").textContent="Sc "+so.sc+" · Si "+so.si;
     $("colYou").classList.toggle("win",won); $("colOpp").classList.toggle("win",ev.winner===opp());
-    $("endFormula").innerHTML="B = log2(N−1) × max(Sc − Si, 0) / t<br>your B = log2("+(Nn-1)+") × max("+sy.sc+" − "+sy.si+", 0) / 60 = <b style='color:#ffd23f'>"+(sy.B||0).toFixed(2)+" b/s</b>";
+    $("endFormula").innerHTML="B = log2(N−1) × max(Sc − Si, 0) / t<br>your B = log2("+(Nn-1)+") × max("+sy.sc+" − "+sy.si+", 0) / "+(ev.elapsed||60)+" = <b style='color:#ffd23f'>"+(sy.B||0).toFixed(2)+" b/s</b>";
     setTimeout(function(){ ko.className="kotext"; endOverlay.classList.add("on"); }, 2800);
   }
   function toLobby(){ stopRec(); endOverlay.classList.remove("on"); cdOverlay.classList.remove("on"); var k=$("koText"); if(k)k.className="kotext"; show("lobby"); }

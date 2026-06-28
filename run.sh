@@ -12,7 +12,7 @@ set -e
 cd "$(dirname "$0")"
 
 MODEL="assets/vosk-model-en.tar.gz"
-MIN_BYTES=30000000   # a complete model is about 41 MB; smaller means missing or partial
+MIN_BYTES=30000000   # a complete model is about 39 MB; smaller means missing or partial
 MODEL_URLS="
 https://raw.githubusercontent.com/Liherrr/street-typer/main/assets/vosk-model-en.tar.gz
 https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.tar.gz
