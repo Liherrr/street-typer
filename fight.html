@@ -94,6 +94,10 @@
   .clock{font-family:var(--mono); font-weight:820; font-size:32px; color:#ffd23f; min-width:66px; text-align:center;
     text-shadow:2px 2px 0 #7c2d12, 0 0 16px rgba(255,138,30,.5)}
   .clock small{display:block;font-size:10px;color:var(--dim);letter-spacing:.14em;font-weight:600}
+  .centermeter{display:flex; flex-direction:column; align-items:center; gap:3px}
+  /* the live bit rate sits quietly under the clock, well above the letters, so it never pulls the eye out of the reading line */
+  .brate{font-family:var(--mono); font-size:12px; font-weight:600; letter-spacing:.05em; color:#5f6b7d; white-space:nowrap}
+  .brate span{color:var(--read)}
 
   .ring{--ringh:min(46vh, calc(min(94vw,820px) / 1.784));   /* arena height; fighters scale off this so size stays a fixed share of the panel */
     position:relative; width:min(94vw,820px); height:var(--ringh); margin:0 auto 10px;
@@ -138,15 +142,11 @@
   .wd.gap{margin-left:.9em}
   .wd.done{color:var(--done)} .wd.bad{color:var(--bad)}
   .wd.cur{color:#0c1018; background:linear-gradient(180deg,var(--lamp-core),var(--lamp)); box-shadow:0 0 18px 2px rgba(255,178,77,.45)}
-  .hudrow{display:flex; gap:10px; justify-content:center; align-items:center; margin-top:12px; font-family:var(--mono); flex-wrap:wrap}
+  .hudrow{display:flex; gap:10px; justify-content:center; margin-top:12px; font-family:var(--mono); flex-wrap:wrap}
   .hcell{background:#0c1422; border:1px solid var(--line); border-radius:9px; padding:7px 13px; min-width:74px; text-align:center}
   .hcell .k{font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--dim)}
   .hcell .v{font-size:18px; font-weight:700; margin-top:2px}
   .hcell.combo .v{color:var(--yel)}
-  /* the live bit rate is the score, so it is the dominant number on the panel */
-  .hcell.rate{padding:6px 24px; min-width:132px; border-color:rgba(255,210,63,.5); background:linear-gradient(180deg,#15243d,#0c1422); box-shadow:0 0 22px rgba(255,210,63,.2)}
-  .hcell.rate .k{font-size:10.5px; color:var(--data)}
-  .hcell.rate .v{font-size:38px; line-height:1; font-weight:820; margin-top:1px; color:var(--data); text-shadow:0 0 16px rgba(255,210,63,.5)}
   .hint{font-family:var(--mono); font-size:12px; color:#6b7686; text-align:center; margin-top:8px}
 
   /* FX */
@@ -303,7 +303,10 @@
         <div class="namerow"><span class="nm" id="younm">YOU</span><span class="hp" id="youhp">1200</span></div>
         <div class="hpbar"><div class="fill" id="youfill" style="width:100%"></div></div>
       </div>
-      <div class="clock" id="clock">60<small>SECONDS</small></div>
+      <div class="centermeter">
+        <div class="clock" id="clock">60<small>SECONDS</small></div>
+        <div class="brate"><span id="hRate">0.00</span> b/s</div>
+      </div>
       <div class="fighterbar opp">
         <div class="namerow"><span class="hp" id="opphp">1200</span><span class="nm" id="oppnm">RIVAL</span></div>
         <div class="hpbar"><div class="fill" id="oppfill" style="width:100%"></div></div>
@@ -319,7 +322,6 @@
       <div class="sheet" id="sheet"></div>
       <div class="kbd" id="kbd" hidden></div>
       <div class="hudrow">
-        <div class="hcell rate"><div class="k">Bits / sec</div><div class="v" id="hRate">0.00</div></div>
         <div class="hcell"><div class="k">Sc</div><div class="v" id="hSc">0</div></div>
         <div class="hcell"><div class="k">Si</div><div class="v" id="hSi">0</div></div>
         <div class="hcell combo"><div class="k">Combo</div><div class="v" id="hCombo">0</div></div>
@@ -360,7 +362,7 @@
   var N=26, DURATION=60, GROUP=4, GROUPS_PER_ROW=6, ROWLEN=GROUP*GROUPS_PER_ROW;
   var seq=[], res=[], idx=0, sc=0, si=0, combo=0;
   var you=null, hpMax=1200, hp={1:hpMax,2:hpMax}, present=[], readyMap={1:false,2:false}, soloBps=null, soloMatch=false;
-  var state="connecting", running=false, startMs=0, rafId=null, es=null;
+  var state="connecting", running=false, startMs=0, rafId=null, es=null, rateT=0;
   var blockC=0, blockW=0, inBlock=0, attackKind=0, ended=false;
 
   function $(id){return document.getElementById(id);}
@@ -608,14 +610,14 @@
   }
   function beginFight(ev){
     cdOverlay.classList.remove("on"); cdNum.className="count";   // FIGHT! disappears exactly when the round begins (input unlocks here)
-    hp=ev.hp||hp; running=true; ended=false; startMs=performance.now();
+    hp=ev.hp||hp; running=true; ended=false; startMs=performance.now(); rateT=0;
     setHP(); render(); rafId=requestAnimationFrame(loop);   // re-render once play is live so the first target shows
   }
   function loop(){
     if(!running)return;
     var el=(performance.now()-startMs)/1000; if(el>DURATION)el=DURATION;
     $("clock").innerHTML=Math.max(0,DURATION-el).toFixed(0)+"<small>SECONDS</small>";
-    var B=bpc()*Math.max(sc-si,0)/Math.max(el,1e-6); $("hRate").textContent=B.toFixed(2);
+    if(el-rateT>=0.4){ rateT=el; $("hRate").textContent=(bpc()*Math.max(sc-si,0)/Math.max(el,1e-6)).toFixed(2); }   // refresh ~2-3x a second, not every frame, so the number stays calm at the edge of the eye
     rafId=requestAnimationFrame(loop);
   }
   function inputLetter(k){                          // one accepted selection: a keypress, or a recognized spoken letter
