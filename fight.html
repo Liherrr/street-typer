@@ -16,12 +16,12 @@
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
+  html,body{margin:0}
   body{background:radial-gradient(1200px 760px at 50% 6%, #6a2fae 0%, rgba(60,28,120,0) 55%),
       linear-gradient(180deg,#3a1f78 0%,#1d1048 55%,var(--bg2) 100%);
-    color:var(--ink); font-family:var(--sans); height:100%; display:flex; align-items:center; justify-content:center;
-    overflow:hidden; -webkit-user-select:none; user-select:none}
-  #app{width:min(96vw,1080px); padding:20px}
+    color:var(--ink); font-family:var(--sans); min-height:100vh; display:flex;
+    overflow-x:hidden; -webkit-user-select:none; user-select:none}
+  #app{width:min(96vw,1080px); padding:20px; margin:auto}   /* margin:auto centers when it fits and lets the page scroll, never clipping, when it doesn't */
   .screen{display:none} .screen.on{display:block}
   .mono{font-family:var(--mono)}
   .gametitle{font-weight:900; font-style:italic; letter-spacing:.01em; font-size:clamp(40px,8vw,74px); margin:0 0 8px;
@@ -64,15 +64,15 @@
     transition:color .15s, background .15s, border-color .15s}
   .seat .kick:hover{color:#fff; background:rgba(255,74,54,.9); border-color:rgba(255,74,54,.95)}
   .seat .kick[hidden]{display:none}
-  .solopanel{max-width:680px; margin:2px 0 10px}
+  .solopanel{max-width:680px; margin:14px 0; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:18px 24px}
   .solopanel[hidden]{display:none}
-  .solohead{font-family:var(--mono); font-size:12.5px; letter-spacing:.03em; color:#8b96a8; margin:0 0 10px}
-  .solorow{display:flex; gap:10px; flex-wrap:wrap}
-  .btn.solo{display:flex; flex-direction:column; align-items:center; gap:2px; font-size:14px; padding:9px 18px;
-    background:transparent; color:#dbe2ee; border:1px solid var(--line); box-shadow:none; text-transform:none; letter-spacing:0; animation:none}
-  .btn.solo b{font-weight:800}
-  .btn.solo small{font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.06em; color:#8b96a8; text-transform:uppercase}
-  .btn.solo:hover{border-color:var(--lamp); color:#fff; transform:translateY(-1px)}
+  .solohead{font-family:var(--mono); font-size:13px; letter-spacing:.02em; color:var(--read); margin:0 0 12px}
+  .solorow{display:flex; gap:12px; flex-wrap:wrap}
+  .btn.solo{flex:1; min-width:120px; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:15px; padding:12px 22px;
+    background:linear-gradient(180deg,#16233b,#0e1626); color:#eaf0fb; border:1px solid #2c3f60; box-shadow:0 6px 18px rgba(0,0,0,.28); text-transform:none; letter-spacing:0; animation:none}
+  .btn.solo b{font-weight:820; font-size:16px}
+  .btn.solo small{font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:.06em; color:#9fb0c8; text-transform:uppercase}
+  .btn.solo:hover{border-color:var(--lamp); color:#fff; transform:translateY(-1px); box-shadow:0 9px 24px rgba(0,0,0,.34)}
   .join{font-family:var(--mono); font-size:13px; color:#8b96a8; line-height:1.7; background:#0a111d; border:1px solid var(--line); border-left:2px solid var(--data); border-radius:8px; padding:12px 14px; margin:6px 0 0}
   .join b{color:var(--data)} .join .u{color:var(--lamp-core); font-size:16px; font-weight:700}
   .status{font-family:var(--mono); font-size:13px; color:var(--read); margin:10px 0 0}
@@ -95,7 +95,7 @@
     text-shadow:2px 2px 0 #7c2d12, 0 0 16px rgba(255,138,30,.5)}
   .clock small{display:block;font-size:10px;color:var(--dim);letter-spacing:.14em;font-weight:600}
 
-  .ring{--ringh:min(50vh, calc(min(94vw,820px) / 1.784));   /* arena height; fighters scale off this so size stays a fixed share of the panel */
+  .ring{--ringh:min(46vh, calc(min(94vw,820px) / 1.784));   /* arena height; fighters scale off this so size stays a fixed share of the panel */
     position:relative; width:min(94vw,820px); height:var(--ringh); margin:0 auto 10px;
     border:2px solid #3d2e7a; border-radius:14px; overflow:hidden;
     background:#cfc9a6 url("assets/background.gif") center bottom / cover no-repeat; image-rendering:pixelated;
@@ -121,7 +121,7 @@
   .stage{position:relative; max-width:min(96vw,960px); margin:0 auto; border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#0b1322,#0a0f1a);
     padding:14px 18px 12px; overflow:hidden}   /* wider than the 820px arena: leaves a 4-char block of slack on each side of the letters */
   .flash{position:absolute; inset:0; pointer-events:none; opacity:0; background:radial-gradient(circle at 50% 60%, rgba(86,227,201,.16), transparent 70%)}
-  .flash.bad{background:radial-gradient(circle at 50% 60%, rgba(255,107,107,.22), transparent 70%)}
+  .flash.bad{background:radial-gradient(circle at 50% 82%, rgba(255,107,107,.11), transparent 62%)}
   .flash.on{animation:flsh .2s ease}
   @keyframes flsh{0%{opacity:1}100%{opacity:0}}
   .sheet{font-family:var(--mono); font-size:clamp(26px,4vw,42px); line-height:1.9; letter-spacing:.08em; text-align:center; position:relative; z-index:2}
@@ -138,11 +138,15 @@
   .wd.gap{margin-left:.9em}
   .wd.done{color:var(--done)} .wd.bad{color:var(--bad)}
   .wd.cur{color:#0c1018; background:linear-gradient(180deg,var(--lamp-core),var(--lamp)); box-shadow:0 0 18px 2px rgba(255,178,77,.45)}
-  .hudrow{display:flex; gap:10px; justify-content:center; margin-top:12px; font-family:var(--mono)}
+  .hudrow{display:flex; gap:10px; justify-content:center; align-items:center; margin-top:12px; font-family:var(--mono); flex-wrap:wrap}
   .hcell{background:#0c1422; border:1px solid var(--line); border-radius:9px; padding:7px 13px; min-width:74px; text-align:center}
   .hcell .k{font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--dim)}
   .hcell .v{font-size:18px; font-weight:700; margin-top:2px}
-  .hcell.rate .v{color:var(--data)} .hcell.combo .v{color:var(--yel)}
+  .hcell.combo .v{color:var(--yel)}
+  /* the live bit rate is the score, so it is the dominant number on the panel */
+  .hcell.rate{padding:6px 24px; min-width:132px; border-color:rgba(255,210,63,.5); background:linear-gradient(180deg,#15243d,#0c1422); box-shadow:0 0 22px rgba(255,210,63,.2)}
+  .hcell.rate .k{font-size:10.5px; color:var(--data)}
+  .hcell.rate .v{font-size:38px; line-height:1; font-weight:820; margin-top:1px; color:var(--data); text-shadow:0 0 16px rgba(255,210,63,.5)}
   .hint{font-family:var(--mono); font-size:12px; color:#6b7686; text-align:center; margin-top:8px}
 
   /* FX */
@@ -283,7 +287,7 @@
       </div>
     </div>
     <div class="solopanel" id="solopanel" hidden>
-      <div class="solohead">Testing alone? Play solo against the computer.</div>
+      <div class="solohead">Play solo against the computer. A full 60-second run, scored the same way. Pick a difficulty:</div>
       <div class="solorow">
         <button class="btn solo" data-bps="6"><b>Easy</b><small>CPU ~6 b/s</small></button>
         <button class="btn solo" data-bps="10"><b>Middle</b><small>CPU ~10 b/s</small></button>
@@ -580,7 +584,7 @@
     });
     var both=present.indexOf(1)>=0&&present.indexOf(2)>=0;
     $("lobStatus").textContent = both ? "Both players connected." : "Waiting for your opponent to join…";
-    var sp=$("solopanel"); if(sp) sp.hidden = both || !you;   // solo option only while you're alone
+    var sp=$("solopanel"); if(sp) sp.hidden = !you;   // solo run is always offered alongside the duel
     refreshGate();
   }
 
