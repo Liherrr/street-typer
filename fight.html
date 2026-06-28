@@ -100,6 +100,8 @@
     border:2px solid #3d2e7a; border-radius:14px; overflow:hidden;
     background:#cfc9a6 url("assets/background.gif") center bottom / cover no-repeat; image-rendering:pixelated;
     box-shadow:inset 0 0 46px rgba(0,0,0,.4)}
+  /* Elizabeth shows the tall on-screen keyboard, so the arena uses a shorter ring to keep the whole interface on one screen */
+  #arena.kbd-on .ring{--ringh:min(24vh, calc(min(94vw,820px) / 1.784))}
   .ground{position:absolute; left:0; right:0; bottom:0; height:34%;
     background:linear-gradient(180deg,rgba(255,170,60,.18),rgba(120,60,20,.05) 60%,rgba(0,0,0,0));
     border-top:1px solid rgba(255,200,120,.18)}
@@ -212,11 +214,11 @@
     box-shadow:0 0 0 1px var(--lamp) inset, 0 0 16px rgba(255,178,77,.18)}
   .prof.sel .pd{color:#ffd23f}
   /* Elizabeth: drawn keyboard cue under the letters */
-  .kbd{display:flex; flex-direction:column; gap:7px; align-items:center; margin:20px 0 4px}
+  .kbd{display:flex; flex-direction:column; gap:5px; align-items:center; margin:8px 0 2px}
   .kbd[hidden]{display:none}
-  .kbd .krow{display:flex; gap:7px; justify-content:center}
-  .kbd .key{position:relative; font-family:var(--mono); font-size:18px; font-weight:700; color:#aeb8c9; width:clamp(28px,4.6vw,46px); height:48px;
-    display:flex; align-items:center; justify-content:center; background:#0e1626; border:1px solid var(--line); border-radius:9px; text-transform:uppercase}
+  .kbd .krow{display:flex; gap:5px; justify-content:center}
+  .kbd .key{position:relative; font-family:var(--mono); font-size:16px; font-weight:700; color:#aeb8c9; width:clamp(26px,4.3vw,42px); height:34px;
+    display:flex; align-items:center; justify-content:center; background:#0e1626; border:1px solid var(--line); border-radius:8px; text-transform:uppercase}
   .kbd .key.lit{color:#0c1018; background:linear-gradient(180deg,var(--lamp-core),var(--lamp)); border-color:var(--lamp); box-shadow:0 0 14px 1px rgba(255,178,77,.5)}   /* current key lights up */
   /* Emma: voice status bar */
   .voicebar{display:flex; align-items:center; gap:9px; justify-content:center; font-family:var(--mono); font-size:12px; color:#9aa6ba; margin-top:10px}
@@ -651,6 +653,7 @@
   function setupProfileUI(){                         // arrange the arena for the chosen profile at round start
     stopMicTest();                                   // release the test mic so the recognizer can use it
     $("kbd").hidden = (profile!=="elizabeth");
+    $("arena").classList.toggle("kbd-on", profile==="elizabeth");   // the on-screen keyboard is tall, so flag the arena to use a shorter ring and stay on one screen
     var voice=(profile==="emma");
     $("voicebar").hidden = !voice;
     $("hint").textContent = voice
