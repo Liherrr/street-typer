@@ -77,5 +77,4 @@ Same idea: connect the repo and set the start command to `python fight_server.py
 ## One shared arena
 
 The hosted server runs one match at a time: the first two visitors are P1 and P2, and a third sees
-"arena full." That is fine for a single head-to-head session. If you ever need several matches at
-once, ask and I will add room codes.
+"arena full." That is fine for a single head-to-head session. Several concurrent matches would require adding room codes.

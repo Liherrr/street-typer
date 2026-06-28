@@ -306,8 +306,7 @@ class Match:
             hp = self.hp()
             other = 2 if pid == 1 else 1
             self._broadcast({"t": "hit", "by": pid, "on": other, "dmg": dmg,
-                             "kind": int(kind) % 5, "hp": hp,
-                             "combo": None})
+                             "kind": int(kind) % 5, "hp": hp})
             # the timed evaluation always runs the full DURATION; maxing the bar does not end it early
 
     def _on_timeout(self):

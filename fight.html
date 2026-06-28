@@ -354,7 +354,7 @@
   var ALPH="abcdefghijklmnopqrstuvwxyz";
   var curAlph=ALPH, profile="calvin";
   var N=26, DURATION=60, GROUP=4, GROUPS_PER_ROW=6, ROWLEN=GROUP*GROUPS_PER_ROW;
-  var seq=[], res=[], idx=0, sc=0, si=0, combo=0, bestCombo=0;
+  var seq=[], res=[], idx=0, sc=0, si=0, combo=0;
   var you=null, hpMax=1200, hp={1:hpMax,2:hpMax}, present=[], readyMap={1:false,2:false}, soloBps=null, soloMatch=false;
   var state="connecting", running=false, startMs=0, rafId=null, es=null;
   var blockC=0, blockW=0, inBlock=0, attackKind=0, ended=false;
@@ -397,7 +397,7 @@
   // ---------- sequence + render ----------
   function randCh(){ if(profile==="emma") return emmaWords[(Math.random()*emmaWords.length)|0]; return curAlph[(Math.random()*curAlph.length)|0]; }
   function ensureBuf(){while(seq.length<idx+2*ROWLEN+2)seq.push(randCh());}
-  function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;bestCombo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;ensureBuf();}
+  function resetSeq(){seq=[];res=[];idx=0;sc=0;si=0;combo=0;blockC=0;blockW=0;inBlock=0;attackKind=0;ended=false;ensureBuf();}
   function buildRow(start,isCur){var h="";for(var c=0;c<ROWLEN;c++){var i=start+c,cls="ch"+(c>0&&c%GROUP===0?" gap":""),ch="&nbsp;";
     if(i>=0&&seq[i]!=null){ch=seq[i];if(i<idx)cls+=(res[i]==="ok"?" done":" bad");else if(isCur&&i===idx)cls+=" cur";}
     h+='<span class="'+cls+'">'+ch+'</span>';}return h;}
@@ -428,7 +428,6 @@
     var fs=cur*(cw*SHEET_FILL)/w;                     // glyph width scales linearly with font -> one step is exact
     if(fs>SHEET_MAX)fs=SHEET_MAX;if(fs<SHEET_MIN)fs=SHEET_MIN;fs=Math.round(fs*10)/10;
     if(Math.abs(fs-cur)>0.3)sheet.style.fontSize=fs+"px";}
-  function curCenter(){var el=sheet.querySelector(".ch.cur, .wd.cur");if(!el)return null;var r=el.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2};}
 
   // ---------- FX ----------
   var KIND=[{c:"#ff8a1e",g:"🔥"},{c:"#ffd23f",g:"⚡"},{c:"#ff3b8c",g:"🗡️"},{c:"#e8351f",g:"💥"},{c:"#ffe23f",g:"⭐"}];
@@ -619,7 +618,7 @@
     if(!running||ended) return;
     if(profile==="emma" ? !bankSet[k] : curAlph.indexOf(k)===-1) return;   // ignore anything outside the active pool
     var t=seq[idx], ok=(k===t);
-    if(ok){ res[idx]="ok"; sc++; combo++; if(combo>bestCombo)bestCombo=combo; blockC++; thock(combo); }
+    if(ok){ res[idx]="ok"; sc++; combo++; blockC++; thock(combo); }
     else { res[idx]="bad"; si++; combo=0; blockW++; buzz(); flashStage(true); }
     idx++; inBlock++; ensureBuf(); render();
     $("hSc").textContent=sc; $("hSi").textContent=si; $("hCombo").textContent=combo;

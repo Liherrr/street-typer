@@ -6,17 +6,17 @@ For ONE character you give a folder of short clips, one per move, named by state
     idle.mp4  attack1.mp4  attack2.mp4  attack3.mp4  attack4.mp4  hurt.mp4  win.mp4  lose.mp4
 (any video extension works). This script, per clip:
   1. extracts frames with ffmpeg and picks a small, evenly-spaced set (the "step-print" choppy look),
-  2. removes the background -> transparent PNG (AI matte by default; or chroma-key a green/blue screen),
+  2. removes the background -> transparent PNG (automatic matte by default; or chroma-key a green/blue screen),
   3. crops to the figure, scales every frame to ONE character height, and pastes it onto a fixed
      canvas with the FEET on a fixed baseline (so the fighter never jumps between frames/states),
   4. writes  characters/<char>/<state>_NN.png  + a matching manifest.json (ext:"png").
 
-Then have me QA a few frames against the acceptance criteria in PROCESSING.md before committing.
+Then QA a few frames against the acceptance criteria in PROCESSING.md before committing.
 
 Dependencies (build-time only; the GAME stays stdlib):
     - ffmpeg on PATH            (frame extraction)
     - pip install pillow numpy  (image ops)
-    - pip install rembg         (AI background removal; first run downloads ~170 MB model)
+    - pip install rembg         (background removal; first run downloads ~170 MB model)
 Usage:
     python tools/process_clips.py RAW_DIR --char p1
     python tools/process_clips.py RAW_DIR --char p2 --matte green --key 00ff00
@@ -146,7 +146,7 @@ def matte(img, mode, key_hex, model="u2net", recover="none"):
         out[..., 3] = np.where(mask, 0, 255)
         out[mask, 1] = (out[mask, 0] + out[mask, 2]) // 2   # despill leftover green edges
         return Image.fromarray(out.astype("uint8"), "RGBA")
-    # default: AI matte
+    # default: automatic matte
     need("rembg")
     from rembg import remove
     out = remove(img, session=_rembg_session(model))

@@ -1,12 +1,8 @@
 # Filming and processing your fighters into game frames
 
-You film each fighter's moves, run them through `tools/process_clips.py`, and the result drops into
-`characters/p1/` (Player 1) and `characters/p2/` (Player 2). Then send the processed frames back to me.
-I check them against the acceptance criteria below before they go into the game.
-
-> Who runs the processing? You or a separate agent can run `process_clips.py`; it is automated. I
-> cannot ingest raw video in chat, so I do not process the footage myself. My job is the quality check
-> before any frames go in.
+You film each fighter's moves and run them through `tools/process_clips.py`, which is automated; the
+result drops into `characters/p1/` (Player 1) and `characters/p2/` (Player 2). Check the processed
+frames against the acceptance criteria below before they go into the game.
 
 ---
 
@@ -23,8 +19,8 @@ idle cleanly. A short held pose is fine; it lingers about 0.4 seconds before idl
 
 The rest:
 
-- Background: a plain, evenly lit wall that contrasts with your clothes and skin (the AI matte handles
-  this), or a green or blue screen if you have one (cleaner edges; use `--matte green`).
+- Background: a plain, evenly lit wall that contrasts with your clothes and skin (the background
+  remover handles this), or a green or blue screen if you have one (cleaner edges; use `--matte green`).
 - Camera: locked off on a tripod, in the same position and zoom for every clip of a fighter. Do not move
   it between moves, since consistent framing is what keeps the frames aligned.
 - Framing: full body, head to feet with a little headroom, feet near the bottom.
@@ -50,7 +46,7 @@ pip install pillow numpy rembg          # one-time (rembg downloads a ~170 MB mo
 
 python tools/process_clips.py raw_p1 --char p1
 python tools/process_clips.py raw_p2 --char p2
-# green screen instead of AI matte:   ... --matte green --key 00ff00
+# green screen instead of the automatic matte:   ... --matte green --key 00ff00
 # filmed facing left:                 ... --face left
 ```
 
@@ -85,10 +81,9 @@ when even sampling lands on a bad frame.
 7. Lightweight. Each frame is no taller than the canvas (540 px by default) and reasonably small;
    the shipped frames run 60 to 90 KB each.
 
-### Handing off for QA
+### Final check
 
-Commit the processed `characters/p1` and `characters/p2` (or share one representative frame from each
-state) and tell me. I will spot-check transparency, baseline alignment, sizing, facing, and counts, then
-either green-light them or send back specific fixes (for example "attack3 frame 4 has a green halo" or
-"lose frames sit 12 px above the baseline, raise `--baseline`"). Once they pass, they are already wired
-into the game.
+Commit the processed `characters/p1` and `characters/p2`, then spot-check transparency, baseline
+alignment, sizing, facing, and counts against the criteria above (for example, catch "attack3 frame 4
+has a green halo" or "lose frames sit 12 px above the baseline, raise `--baseline`"). Once they pass,
+they are already wired into the game.
